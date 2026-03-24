@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Claude + Figma",
-  description: "Design to code, powered by Figma MCP and Claude Code",
+  title: "Mergen | Enterprise Platform for the Future",
+  description:
+    "Transform your business with AI-powered workflows, intelligent automation, and seamless enterprise integration.",
 };
 
 export default function RootLayout({
@@ -12,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="noise">
       <body>{children}</body>
     </html>
   );
