@@ -1,84 +1,68 @@
 "use client";
 
-import { motion, useInView, useMotionValue, useTransform, animate } from "framer-motion";
-import { useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 
-interface CounterProps {
-  from: number;
-  to: number;
-  suffix?: string;
-  decimals?: number;
-}
-
-function AnimatedCounter({ from, to, suffix = "", decimals = 0 }: CounterProps) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
-  const count = useMotionValue(from);
-  const rounded = useTransform(count, (v) => {
-    if (decimals > 0) return v.toFixed(decimals);
-    return Math.round(v).toLocaleString();
-  });
-
-  useEffect(() => {
-    if (isInView) {
-      animate(count, to, { duration: 2, ease: [0.25, 0.4, 0.25, 1] });
-    }
-  }, [isInView, count, to]);
-
+export default function AutonomousWorkflows() {
   return (
-    <span ref={ref}>
-      <motion.span>{rounded}</motion.span>
-      {suffix}
-    </span>
-  );
-}
+    <section className="sn-section overflow-hidden" style={{ background: "linear-gradient(180deg, #0d1b1e 0%, #0a171a 100%)" }}>
+      <div className="sn-container">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-14"
+        >
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight">
+            <span className="sn-heading-green">Bring autonomous workflows</span>
+            <br />
+            <span className="text-white">to every corner of your business</span>
+          </h2>
+        </motion.div>
 
-const stats = [
-  { value: 500, suffix: "+", label: "ServiceNow Implementations", description: "Successfully delivered across industries" },
-  { value: 98, suffix: "%", label: "Client Satisfaction", description: "Based on post-project surveys" },
-  { value: 73, suffix: "%", label: "Average MTTR Reduction", description: "Mean time to resolution improvement" },
-  { value: 150, suffix: "+", label: "Certified Consultants", description: "ServiceNow certified professionals" },
-];
-
-export default function Stats() {
-  return (
-    <section className="py-20 md:py-28" style={{ background: "linear-gradient(145deg, #1a2e35 0%, #0f1f24 100%)" }}>
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <motion.span
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="inline-block text-sm font-semibold text-green-400 uppercase tracking-[0.15em] mb-4"
-          >
-            Impact
-          </motion.span>
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-3xl md:text-4xl lg:text-5xl font-bold text-white"
-          >
-            Results that speak for themselves
-          </motion.h2>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-          {stats.map((stat, i) => (
+        {/* Workflow cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {[
+            {
+              title: "Intelligent Routing",
+              desc: "AI automatically classifies, prioritizes, and routes every request to the right team \u2014 no manual triage needed.",
+              icon: (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                </svg>
+              ),
+            },
+            {
+              title: "Predictive Resolution",
+              desc: "Machine learning models predict issues before they occur and suggest resolutions based on historical patterns.",
+              icon: (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                </svg>
+              ),
+            },
+            {
+              title: "End-to-End Automation",
+              desc: "From approval chains to complex multi-department workflows, automate entire business processes without code.",
+              icon: (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.5 12a7.5 7.5 0 0015 0m-15 0a7.5 7.5 0 1115 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077l1.41-.513m14.095-5.13l1.41-.513M5.106 17.785l1.15-.964m11.49-9.642l1.149-.964M7.501 19.795l.75-1.3m7.5-12.99l.75-1.3m-6.063 16.658l.26-1.477m2.605-14.772l.26-1.477m0 17.726l-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205L12 12m6.894 5.785l-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864l-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495" />
+                </svg>
+              ),
+            },
+          ].map((card, i) => (
             <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 30 }}
+              key={card.title}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.1 }}
-              className="text-center"
+              transition={{ delay: i * 0.1 }}
+              className="rounded-2xl bg-sn-bg-card border border-sn-border p-6 md:p-8 hover:border-sn-green/20 transition-colors group"
             >
-              <div className="text-4xl md:text-5xl lg:text-6xl font-bold text-green-400 mb-3">
-                <AnimatedCounter from={0} to={stat.value} suffix={stat.suffix} />
+              <div className="w-12 h-12 rounded-xl bg-sn-green/10 border border-sn-green/20 flex items-center justify-center text-sn-green mb-5 group-hover:bg-sn-green/20 transition-colors">
+                {card.icon}
               </div>
-              <div className="text-base font-semibold text-white mb-1">{stat.label}</div>
-              <div className="text-sm text-gray-500">{stat.description}</div>
+              <h3 className="text-lg font-bold text-white mb-3">{card.title}</h3>
+              <p className="text-sm text-sn-text-dim leading-relaxed">{card.desc}</p>
             </motion.div>
           ))}
         </div>

@@ -4,153 +4,212 @@ import { motion } from "framer-motion";
 
 export default function Hero() {
   return (
-    <section className="relative min-h-[92vh] flex items-center overflow-hidden pt-24 lg:pt-32" style={{ background: "linear-gradient(145deg, #1a2e35 0%, #0f1f24 40%, #162329 70%, #0d1a1f 100%)" }}>
-      {/* Decorative elements */}
-      <div className="absolute top-0 right-0 w-[60%] h-full opacity-20">
-        <div className="absolute top-20 right-20 w-[400px] h-[400px] rounded-full" style={{ background: "radial-gradient(circle, rgba(34,197,94,0.15) 0%, transparent 70%)" }} />
-        <div className="absolute bottom-40 right-60 w-[300px] h-[300px] rounded-full" style={{ background: "radial-gradient(circle, rgba(34,197,94,0.1) 0%, transparent 70%)" }} />
-      </div>
+    <section className="relative overflow-hidden" style={{ background: "linear-gradient(180deg, #0d1b1e 0%, #0a1a1d 50%, #0d1f22 100%)" }}>
+      {/* Background gradient glow */}
+      <div className="absolute top-0 right-0 w-[70%] h-[80%] opacity-30" style={{ background: "radial-gradient(ellipse at 70% 30%, rgba(34,197,94,0.15) 0%, transparent 60%)" }} />
 
-      {/* Dot grid pattern */}
-      <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 0)", backgroundSize: "32px 32px" }} />
-
-      <div className="max-w-7xl mx-auto px-6 relative z-10 w-full">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <div className="sn-container pt-10 pb-16 md:pt-16 md:pb-24">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-8 items-center">
           {/* Left content */}
-          <div>
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-500/15 border border-green-500/20 text-green-400 text-sm font-medium rounded-full mb-8">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                Premier ServiceNow Partner
-              </span>
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-[1.05] mb-6"
-            >
-              Put AI to work{" "}
-              <span className="text-green-400">for your people</span>
-            </motion.h1>
-
+          <div className="relative z-10">
             <motion.p
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-lg md:text-xl text-gray-400 max-w-xl mb-10 leading-relaxed"
+              transition={{ duration: 0.4 }}
+              className="text-xs font-semibold text-sn-text-dim uppercase tracking-[0.2em] mb-3"
             >
-              Mergen accelerates your ServiceNow journey with AI-powered workflows,
-              intelligent automation, and expert-led implementations that deliver
-              measurable results.
+              Autonomous Workforce
             </motion.p>
 
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-col sm:flex-row gap-4 mb-12"
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-3xl md:text-4xl lg:text-[3.2rem] font-extrabold text-white leading-[1.1] mb-4"
             >
-              <a href="#contact" className="inline-flex items-center justify-center px-8 py-4 bg-green-600 text-white font-semibold rounded-full hover:bg-green-500 transition-all duration-200 text-base shadow-lg shadow-green-600/20">
-                Get Started
-                <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </a>
-              <a href="#solutions" className="inline-flex items-center justify-center px-8 py-4 border-2 border-white/20 text-white font-semibold rounded-full hover:bg-white/10 transition-all duration-200 text-base">
-                Explore Solutions
-              </a>
-            </motion.div>
+              <span className="sn-heading-green">Meet the AI workforce</span>
+              <br />
+              that thinks and acts
+            </motion.h1>
 
-            {/* Mini stats */}
+            {/* Carousel dots */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="flex flex-wrap gap-8 lg:gap-12"
+              transition={{ delay: 0.3 }}
+              className="flex items-center gap-2 mb-6"
             >
-              {[
-                { value: "500+", label: "Implementations" },
-                { value: "98%", label: "Client Satisfaction" },
-                { value: "150+", label: "Certified Experts" },
-              ].map((stat) => (
-                <div key={stat.label}>
-                  <div className="text-2xl md:text-3xl font-bold text-white">{stat.value}</div>
-                  <div className="text-sm text-gray-500 mt-0.5">{stat.label}</div>
-                </div>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className={`h-2 rounded-full transition-all ${i === 0 ? "w-6 bg-sn-green" : "w-2 bg-white/20"}`} />
               ))}
+              <div className="w-4 h-2 rounded-full bg-white/10 ml-1" />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className="lg:hidden mb-6"
+            >
+              <p className="text-sm text-sn-text-muted leading-relaxed max-w-md">
+                Scale your team with AI specialists that have the business context and governance to handle workflows end-to-end.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="flex flex-wrap gap-3 lg:hidden"
+            >
+              <a href="#" className="sn-btn-outline-green">Learn More</a>
+              <a href="#" className="sn-btn-outline flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Watch Broadcast
+              </a>
             </motion.div>
           </div>
 
-          {/* Right - Dashboard mockup */}
-          <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="hidden lg:block relative"
-          >
-            <div className="relative rounded-2xl overflow-hidden bg-gray-900/60 backdrop-blur border border-white/10 p-1 shadow-2xl">
-              <div className="rounded-xl bg-gray-900/80 p-5">
-                {/* Window bar */}
-                <div className="flex items-center gap-2 mb-5">
-                  <div className="w-3 h-3 rounded-full bg-red-400/70" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-400/70" />
-                  <div className="w-3 h-3 rounded-full bg-green-400/70" />
-                  <div className="ml-3 flex-1 h-6 rounded-lg bg-white/5" />
-                </div>
+          {/* Right side - description + CTA (desktop) */}
+          <div className="hidden lg:flex flex-col justify-center">
+            <motion.p
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-sm text-sn-text-muted leading-relaxed max-w-md mb-6"
+            >
+              Scale your team with AI specialists that have the business context and governance to handle workflows end-to-end.
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="flex gap-3"
+            >
+              <a href="#" className="sn-btn-outline-green">Learn More</a>
+              <a href="#" className="sn-btn-outline flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Watch Broadcast
+              </a>
+            </motion.div>
+          </div>
+        </div>
 
-                {/* Dashboard content */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  {[
-                    { val: "2,847", label: "Active Workflows", color: "text-green-400" },
-                    { val: "99.9%", label: "Platform Uptime", color: "text-blue-400" },
-                    { val: "12ms", label: "Avg Response", color: "text-purple-400" },
-                  ].map((item) => (
-                    <div key={item.label} className="rounded-lg bg-white/5 border border-white/5 p-3">
-                      <div className={`text-xl font-bold ${item.color}`}>{item.val}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{item.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Chart bars */}
-                <div className="rounded-lg bg-white/[0.03] border border-white/5 p-4 flex items-end gap-1.5 h-40">
-                  {[35, 55, 45, 70, 50, 85, 65, 90, 55, 75, 60, 80, 70, 95, 60].map((h, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ height: 0 }}
-                      animate={{ height: `${h}%` }}
-                      transition={{ delay: 0.8 + i * 0.04, duration: 0.5, ease: "easeOut" }}
-                      className="flex-1 rounded-sm bg-gradient-to-t from-green-600/70 to-green-400/30"
-                    />
-                  ))}
-                </div>
-
-                {/* Bottom row */}
-                <div className="grid grid-cols-2 gap-3 mt-4">
-                  <div className="rounded-lg bg-white/5 border border-white/5 p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 rounded-full bg-green-400" />
-                      <span className="text-xs text-gray-400">Incidents Resolved</span>
-                    </div>
-                    <div className="text-lg font-bold text-white">1,284</div>
+        {/* Platform screenshot mockup */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.3 }}
+          className="mt-10 relative"
+        >
+          <div className="relative grid lg:grid-cols-12 gap-4 items-end">
+            {/* Main screenshot */}
+            <div className="lg:col-span-8 relative">
+              <div className="rounded-xl overflow-hidden border border-sn-border bg-sn-bg-card shadow-2xl">
+                {/* Browser bar */}
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-sn-nav border-b border-sn-border">
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-400/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-400/60" />
                   </div>
-                  <div className="rounded-lg bg-white/5 border border-white/5 p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-400" />
-                      <span className="text-xs text-gray-400">MTTR Reduction</span>
-                    </div>
-                    <div className="text-lg font-bold text-white">73%</div>
+                  <div className="flex-1 h-5 rounded bg-white/5 mx-8" />
+                </div>
+                {/* Content area */}
+                <div className="p-4 md:p-6">
+                  {/* Tab nav */}
+                  <div className="flex items-center gap-4 mb-5 border-b border-sn-border pb-3">
+                    {["Workflows", "Service", "Assets", "Agents"].map((tab, i) => (
+                      <span key={tab} className={`text-xs font-medium pb-1 ${i === 3 ? "text-sn-green border-b-2 border-sn-green" : "text-sn-text-dim"}`}>{tab}</span>
+                    ))}
+                  </div>
+                  <h3 className="text-sm font-bold text-white mb-4">AI Specialists</h3>
+                  {/* Cards grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {[
+                      { title: "Joie Finance Benefit Specialist", desc: "This specialist is created by ServiceNow to help navigate financial benefits and queries." },
+                      { title: "Enterprise ADA Vendor Compliance", desc: "An AI analyst tracking vendor compliance metrics and regulatory standards." },
+                      { title: "Security Incident Response", desc: "AI specialist for automated threat detection, escalation, and remediation." },
+                    ].map((card) => (
+                      <div key={card.title} className="rounded-lg bg-white/[0.03] border border-sn-border p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-6 h-6 rounded-full bg-sn-green/20 flex items-center justify-center">
+                            <div className="w-2.5 h-2.5 rounded-full bg-sn-green" />
+                          </div>
+                          <span className="text-xs font-semibold text-white truncate">{card.title}</span>
+                        </div>
+                        <p className="text-[10px] text-sn-text-dim leading-relaxed">{card.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Bottom metrics row */}
+                  <div className="grid grid-cols-3 gap-3 mt-4">
+                    {[
+                      { label: "Total Completed", val: "12,847" },
+                      { label: "Collaboration Score", val: "94.2%" },
+                      { label: "CISO Weekly Reports", val: "26" },
+                    ].map((m) => (
+                      <div key={m.label} className="rounded-lg bg-white/[0.02] border border-sn-border p-2.5">
+                        <div className="text-[10px] text-sn-text-dim mb-0.5">{m.label}</div>
+                        <div className="text-sm font-bold text-white">{m.val}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Glow under card */}
-            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-green-500/10 blur-3xl rounded-full" />
-          </motion.div>
-        </div>
+            {/* Decorative 3D elements */}
+            <div className="hidden lg:flex lg:col-span-4 flex-col items-center justify-center relative h-full">
+              {/* Power button / green orb */}
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="relative"
+              >
+                <div className="w-28 h-28 rounded-full bg-gradient-to-br from-green-400 to-green-600 shadow-2xl shadow-green-500/30 flex items-center justify-center">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" />
+                  </svg>
+                </div>
+              </motion.div>
+              {/* Sparkle decorations */}
+              <motion.div
+                animate={{ y: [0, -8, 0], rotate: [0, 15, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                className="absolute top-4 right-8"
+              >
+                <svg className="w-10 h-10 text-cyan-400/60" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+                </svg>
+              </motion.div>
+              <motion.div
+                animate={{ y: [0, -6, 0], rotate: [0, -10, 0] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                className="absolute bottom-16 right-4"
+              >
+                <svg className="w-6 h-6 text-purple-400/40" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+                </svg>
+              </motion.div>
+              <motion.div
+                animate={{ y: [0, -12, 0] }}
+                transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+                className="absolute top-20 left-0"
+              >
+                <svg className="w-8 h-8 text-teal-400/40" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+                </svg>
+              </motion.div>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
