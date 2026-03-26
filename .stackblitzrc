@@ -1,4 +1,4 @@
 {
-  "startCommand": "npm run dev",
+  "startCommand": "npm run preview",
   "installDependencies": true
 }
