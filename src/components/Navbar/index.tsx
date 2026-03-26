@@ -1,132 +1,191 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Button from "@/components/ui/Button";
 
-const navLinks = [
-  { label: "Platform", href: "#features" },
-  { label: "Solutions", href: "#solutions" },
-  { label: "Customers", href: "#testimonials" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "Resources", href: "#resources" },
+const navItems = [
+  {
+    label: "Services",
+    submenu: [
+      { label: "ServiceNow Implementation", href: "#" },
+      { label: "Managed Services", href: "#" },
+      { label: "Custom App Development", href: "#" },
+      { label: "Integration Services", href: "#" },
+      { label: "Migration & Upgrades", href: "#" },
+    ],
+  },
+  {
+    label: "Solutions",
+    submenu: [
+      { label: "IT Service Management", href: "#solutions" },
+      { label: "IT Operations Management", href: "#solutions" },
+      { label: "Customer Service Management", href: "#solutions" },
+      { label: "HR Service Delivery", href: "#solutions" },
+      { label: "Security Operations", href: "#solutions" },
+    ],
+  },
+  {
+    label: "Industries",
+    submenu: [
+      { label: "Financial Services", href: "#" },
+      { label: "Healthcare", href: "#" },
+      { label: "Government", href: "#" },
+      { label: "Technology", href: "#" },
+      { label: "Manufacturing", href: "#" },
+    ],
+  },
+  { label: "Customers", href: "#customers" },
+  { label: "About", href: "#about" },
 ];
 
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
-    <motion.header
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.6, ease: [0.25, 0.4, 0.25, 1] }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? "bg-surface-950/80 backdrop-blur-xl border-b border-white/5 shadow-2xl shadow-black/20"
-          : "bg-transparent"
+          ? "bg-white shadow-md"
+          : "bg-white/95 backdrop-blur-sm"
       }`}
     >
-      <nav className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      {/* Top utility bar */}
+      <div className="hidden lg:block bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-end h-8 gap-6 text-xs">
+          <a href="#" className="hover:text-green-400 transition-colors">Events</a>
+          <a href="#" className="hover:text-green-400 transition-colors">Blog</a>
+          <a href="#" className="hover:text-green-400 transition-colors">Support</a>
+          <a href="#" className="hover:text-green-400 transition-colors">Careers</a>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-16 lg:h-[72px]">
         {/* Logo */}
-        <motion.a
-          href="#"
-          className="flex items-center gap-3 group"
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-purple-500 flex items-center justify-center shadow-lg shadow-brand-500/30">
+        <a href="#" className="flex items-center gap-2.5 shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center">
             <span className="text-white font-bold text-lg">M</span>
           </div>
-          <span className="text-xl font-bold text-white">
-            Mergen
-          </span>
-        </motion.a>
+          <div className="flex flex-col">
+            <span className="text-lg font-bold text-gray-900 leading-tight">Mergen</span>
+            <span className="text-[10px] text-gray-500 leading-tight tracking-wide">ServiceNow Partner</span>
+          </div>
+        </a>
 
         {/* Desktop Nav */}
-        <div className="hidden lg:flex items-center gap-1">
-          {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className="px-4 py-2 text-sm text-white/70 hover:text-white rounded-lg hover:bg-white/5 transition-all duration-200"
+        <div className="hidden lg:flex items-center gap-0.5">
+          {navItems.map((item) => (
+            <div
+              key={item.label}
+              className="relative"
+              onMouseEnter={() =>
+                item.submenu && setActiveDropdown(item.label)
+              }
+              onMouseLeave={() => setActiveDropdown(null)}
             >
-              {link.label}
-            </a>
+              <a
+                href={(item as { href?: string }).href || "#"}
+                className="px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-green-700 transition-colors flex items-center gap-1 rounded-lg hover:bg-gray-50"
+              >
+                {item.label}
+                {item.submenu && (
+                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </a>
+
+              {item.submenu && activeDropdown === item.label && (
+                <div className="absolute top-full left-0 pt-1 w-64">
+                  <div className="bg-white rounded-xl shadow-2xl border border-gray-100 py-2">
+                    {item.submenu.map((sub) => (
+                      <a
+                        key={sub.label}
+                        href={sub.href}
+                        className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-400 opacity-0 group-hover:opacity-100" />
+                        {sub.label}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
 
         {/* Desktop CTA */}
         <div className="hidden lg:flex items-center gap-3">
-          <Button variant="ghost" size="sm">
-            Sign in
-          </Button>
-          <Button variant="primary" size="sm">
-            Start free trial
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 7l5 5m0 0l-5 5m5-5H6"
-              />
-            </svg>
-          </Button>
+          <a href="#contact" className="text-sm font-medium text-gray-700 hover:text-green-700 transition-colors px-3 py-2">
+            Contact Us
+          </a>
+          <a href="#contact" className="inline-flex items-center px-5 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-full hover:bg-green-700 transition-colors shadow-sm">
+            Get a Demo
+          </a>
         </div>
 
-        {/* Mobile menu button */}
+        {/* Mobile Toggle */}
         <button
-          className="lg:hidden p-2 text-white/70 hover:text-white"
+          className="lg:hidden p-2 text-gray-700"
           onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label="Toggle menu"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {mobileOpen ? (
+          {mobileOpen ? (
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
+            </svg>
+          )}
         </button>
-      </nav>
+      </div>
 
-      {/* Mobile Nav */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-surface-950/95 backdrop-blur-xl border-b border-white/10"
-          >
-            <div className="px-6 py-4 flex flex-col gap-2">
-              {navLinks.map((link) => (
+      {/* Mobile Menu */}
+      {mobileOpen && (
+        <div className="lg:hidden bg-white border-t border-gray-100 max-h-[80vh] overflow-y-auto shadow-xl">
+          <div className="px-6 py-4 space-y-1">
+            {navItems.map((item) => (
+              <div key={item.label}>
                 <a
-                  key={link.label}
-                  href={link.href}
-                  className="px-4 py-3 text-white/70 hover:text-white rounded-lg hover:bg-white/5 transition-all"
-                  onClick={() => setMobileOpen(false)}
+                  href={(item as { href?: string }).href || "#"}
+                  className="block px-4 py-3 text-base font-medium text-gray-900 hover:bg-green-50 rounded-lg"
+                  onClick={() => !item.submenu && setMobileOpen(false)}
                 >
-                  {link.label}
+                  {item.label}
                 </a>
-              ))}
-              <div className="pt-4 border-t border-white/10 flex flex-col gap-2">
-                <Button variant="secondary" size="md">Sign in</Button>
-                <Button variant="primary" size="md">Start free trial</Button>
+                {item.submenu && (
+                  <div className="ml-4 space-y-0.5 mb-2">
+                    {item.submenu.map((sub) => (
+                      <a
+                        key={sub.label}
+                        href={sub.href}
+                        className="block px-4 py-2 text-sm text-gray-600 hover:text-green-700 rounded-lg"
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        {sub.label}
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
+            ))}
+            <div className="pt-4 border-t border-gray-100">
+              <a href="#contact" className="block w-full text-center px-5 py-3 bg-green-600 text-white text-sm font-semibold rounded-full hover:bg-green-700">
+                Get a Demo
+              </a>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.header>
+          </div>
+        </div>
+      )}
+    </nav>
   );
 }

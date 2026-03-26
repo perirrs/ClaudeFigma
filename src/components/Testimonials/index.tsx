@@ -1,102 +1,111 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { fadeUp, staggerContainer, staggerItem } from "@/lib/animations";
-import SectionLabel from "@/components/ui/SectionLabel";
-import GradientOrb from "@/components/ui/GradientOrb";
 
-const testimonials = [
+const stories = [
   {
-    quote:
-      "Mergen transformed how we handle IT service management. We reduced ticket resolution time by 73% in the first quarter.",
+    quote: "Mergen transformed our ServiceNow instance from a basic ticketing tool into an enterprise-wide automation platform. We reduced incident resolution time by 73%.",
     author: "Sarah Chen",
-    title: "CTO, Axiom Technologies",
+    title: "CTO, Fortune 500 Financial Services Company",
     avatar: "SC",
-    color: "from-brand-400 to-purple-500",
+    gradient: "from-green-500 to-emerald-600",
+    metric: "73%",
+    metricLabel: "Faster Resolution",
   },
   {
-    quote:
-      "The AI-powered workflows are genuinely transformative. It's like having a team of analysts working 24/7 to optimize every process.",
+    quote: "Their expertise in ServiceNow ITSM and ITOM helped us achieve visibility across 50,000+ CIs. The proactive monitoring has eliminated unplanned outages.",
     author: "Marcus Rivera",
-    title: "VP of Operations, NovaCorp",
+    title: "VP of IT Operations, Global Healthcare Provider",
     avatar: "MR",
-    color: "from-emerald-400 to-teal-500",
+    gradient: "from-blue-500 to-cyan-600",
+    metric: "99.9%",
+    metricLabel: "Uptime Achieved",
   },
   {
-    quote:
-      "We evaluated every major platform on the market. Mergen was the only one that could handle our scale without compromising on speed.",
+    quote: "Mergen's HR Service Delivery implementation streamlined our onboarding from 3 weeks to 3 days. The employee experience has been completely transformed.",
     author: "Dr. Amara Osei",
-    title: "Director of Engineering, GlobalHealth",
+    title: "CHRO, Technology Enterprise",
     avatar: "AO",
-    color: "from-amber-400 to-orange-500",
+    gradient: "from-purple-500 to-violet-600",
+    metric: "85%",
+    metricLabel: "Faster Onboarding",
   },
 ];
 
 export default function Testimonials() {
   return (
-    <section id="testimonials" className="relative py-32 overflow-hidden">
-      <GradientOrb color="blue" size="lg" className="-left-40 top-1/3" />
-
-      {/* Divider */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
+    <section id="customers" className="py-20 md:py-28 bg-gray-50">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center mb-20">
-          <SectionLabel>Customer Stories</SectionLabel>
-          <motion.h2
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
+        <div className="text-center mb-16">
+          <motion.span
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            custom={0.1}
-            className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6"
+            className="inline-block text-sm font-semibold text-green-600 uppercase tracking-[0.15em] mb-4"
           >
-            Loved by teams
-            <br />
-            <span className="gradient-text">everywhere</span>
+            Customer Stories
+          </motion.span>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-5"
+          >
+            Trusted by enterprises{" "}
+            <span className="text-green-600">worldwide</span>
           </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-lg text-gray-500 max-w-2xl mx-auto"
+          >
+            See how leading organizations partner with Mergen to unlock the
+            full potential of ServiceNow.
+          </motion.p>
         </div>
 
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8"
-        >
-          {testimonials.map((t) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {stories.map((story, i) => (
             <motion.div
-              key={t.author}
-              variants={staggerItem}
-              className="relative rounded-2xl glass p-8 hover:bg-white/[0.08] transition-all duration-500 group hover:-translate-y-1"
+              key={story.author}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.1 }}
+              className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
             >
-              {/* Quote icon */}
-              <svg
-                className="w-10 h-10 text-brand-500/30 mb-6"
-                fill="currentColor"
-                viewBox="0 0 32 32"
-              >
+              {/* Metric highlight */}
+              <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
+                <div className={`text-4xl font-bold bg-gradient-to-r ${story.gradient} bg-clip-text text-transparent`}>
+                  {story.metric}
+                </div>
+                <div className="text-sm font-medium text-gray-500">{story.metricLabel}</div>
+              </div>
+
+              {/* Quote */}
+              <svg className="w-8 h-8 text-green-200 mb-4" fill="currentColor" viewBox="0 0 32 32">
                 <path d="M10 8c-3.3 0-6 2.7-6 6v10h10V14H8c0-1.1.9-2 2-2V8zm14 0c-3.3 0-6 2.7-6 6v10h10V14h-6c0-1.1.9-2 2-2V8z" />
               </svg>
-
-              <p className="text-white/70 leading-relaxed mb-8 text-lg">
-                &ldquo;{t.quote}&rdquo;
+              <p className="text-gray-600 leading-relaxed mb-8">
+                &ldquo;{story.quote}&rdquo;
               </p>
 
+              {/* Author */}
               <div className="flex items-center gap-4">
-                <div
-                  className={`w-12 h-12 rounded-full bg-gradient-to-br ${t.color} flex items-center justify-center text-sm font-bold text-white shadow-lg`}
-                >
-                  {t.avatar}
+                <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${story.gradient} flex items-center justify-center text-sm font-bold text-white`}>
+                  {story.avatar}
                 </div>
                 <div>
-                  <div className="font-semibold text-white">{t.author}</div>
-                  <div className="text-sm text-white/40">{t.title}</div>
+                  <div className="font-semibold text-gray-900 text-sm">{story.author}</div>
+                  <div className="text-xs text-gray-400">{story.title}</div>
                 </div>
               </div>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

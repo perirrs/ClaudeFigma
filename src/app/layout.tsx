@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mergen | Enterprise Platform for the Future",
+  title: "Mergen | Premier ServiceNow Partner",
   description:
-    "Transform your business with AI-powered workflows, intelligent automation, and seamless enterprise integration.",
+    "Mergen is a premier ServiceNow partner helping enterprises put AI to work with intelligent workflows, automation, and seamless digital transformation.",
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="noise">
+    <html lang="en">
       <body>{children}</body>
     </html>
   );

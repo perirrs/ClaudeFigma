@@ -12,42 +12,41 @@
   }
 
   body {
-    @apply bg-surface-950 text-white font-sans;
+    @apply bg-white text-gray-900 font-sans;
   }
 
   ::selection {
-    @apply bg-brand-500/30 text-white;
+    @apply bg-green-100 text-green-900;
   }
 }
 
 @layer components {
-  .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-400 via-purple-400 to-pink-400;
-    background-size: 200% 200%;
-    animation: gradient 8s ease infinite;
+  .sn-gradient {
+    background: linear-gradient(135deg, #293e40 0%, #1a2a2c 50%, #0d1b1d 100%);
   }
 
-  .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+  .sn-gradient-green {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   }
 
-  .glass-hover {
-    @apply hover:bg-white/10 hover:border-white/20 transition-all duration-300;
+  .sn-btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white font-semibold rounded-full hover:bg-green-700 transition-all duration-200;
   }
 
-  .glow {
-    box-shadow: 0 0 40px rgba(99, 102, 241, 0.15),
-      0 0 80px rgba(99, 102, 241, 0.08);
+  .sn-btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-3 border-2 border-white text-white font-semibold rounded-full hover:bg-white hover:text-gray-900 transition-all duration-200;
   }
 
-  .glow-sm {
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.12);
+  .sn-btn-outline {
+    @apply inline-flex items-center justify-center px-6 py-3 border-2 border-gray-900 text-gray-900 font-semibold rounded-full hover:bg-gray-900 hover:text-white transition-all duration-200;
   }
-}
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .sn-section {
+    @apply py-16 md:py-24 px-4;
+  }
+
+  .sn-container {
+    @apply max-w-7xl mx-auto;
   }
 }
 
@@ -61,22 +60,9 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-white/20 rounded-full;
+  @apply bg-gray-300 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-white/30;
-}
-
-/* Noise overlay for depth */
-.noise::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 50;
+  @apply bg-gray-400;
 }

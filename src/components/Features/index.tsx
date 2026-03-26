@@ -1,141 +1,159 @@
 "use client";
 
-import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
-import { fadeUp, staggerContainer, staggerItem } from "@/lib/animations";
-import SectionLabel from "@/components/ui/SectionLabel";
-import GradientOrb from "@/components/ui/GradientOrb";
+import { motion } from "framer-motion";
 
-const features = [
+const trustedBy = [
+  "Deloitte", "Accenture", "KPMG", "PwC", "EY", "Cognizant", "Infosys", "Wipro",
+];
+
+const solutions = [
   {
     icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611l-.573.097c-3.682.623-7.441.623-11.124 0l-.573-.097c-1.717-.293-2.3-2.379-1.067-3.61L7.2 15.3" />
+      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.662 48.662 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
       </svg>
     ),
-    title: "AI-Powered Automation",
-    description: "Intelligent workflows that learn from your processes, predict bottlenecks, and auto-optimize in real time.",
-    gradient: "from-brand-500/10 to-purple-500/5",
-    border: "hover:border-brand-500/30",
+    title: "IT Service Management",
+    description: "Modernize IT service delivery with AI-powered incident management, problem resolution, and change management on ServiceNow.",
+    color: "bg-green-50 text-green-700 border-green-100",
+    iconBg: "bg-green-100 text-green-600",
   },
   {
     icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
       </svg>
     ),
-    title: "Unified Dashboard",
-    description: "A single pane of glass for every workflow, integration, and metric across your entire organization.",
-    gradient: "from-emerald-500/10 to-teal-500/5",
-    border: "hover:border-emerald-500/30",
+    title: "Customer Service Management",
+    description: "Deliver seamless customer experiences with intelligent case routing, self-service portals, and proactive issue resolution.",
+    color: "bg-blue-50 text-blue-700 border-blue-100",
+    iconBg: "bg-blue-100 text-blue-600",
   },
   {
     icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
       </svg>
     ),
-    title: "Enterprise Security",
-    description: "SOC 2 Type II, ISO 27001, and FedRAMP certified. Zero-trust architecture with end-to-end encryption.",
-    gradient: "from-amber-500/10 to-orange-500/5",
-    border: "hover:border-amber-500/30",
+    title: "HR Service Delivery",
+    description: "Transform employee experiences with automated onboarding, case management, and AI-driven HR workflows.",
+    color: "bg-purple-50 text-purple-700 border-purple-100",
+    iconBg: "bg-purple-100 text-purple-600",
   },
   {
     icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+      </svg>
+    ),
+    title: "Security Operations",
+    description: "Automate threat response, vulnerability management, and security incident workflows with ServiceNow SecOps.",
+    color: "bg-red-50 text-red-700 border-red-100",
+    iconBg: "bg-red-100 text-red-600",
+  },
+  {
+    icon: (
+      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
       </svg>
     ),
-    title: "Lightning Performance",
-    description: "Sub-50ms response times with globally distributed edge infrastructure. Scale to millions without breaking a sweat.",
-    gradient: "from-pink-500/10 to-rose-500/5",
-    border: "hover:border-pink-500/30",
+    title: "AI & Automation",
+    description: "Harness Now Assist and Mergen's AI expertise to build intelligent workflows that learn, predict, and act autonomously.",
+    color: "bg-amber-50 text-amber-700 border-amber-100",
+    iconBg: "bg-amber-100 text-amber-600",
   },
   {
     icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.562a4.5 4.5 0 00-1.242-7.244l4.5-4.5a4.5 4.5 0 016.364 6.364l-1.757 1.757" />
-      </svg>
-    ),
-    title: "500+ Integrations",
-    description: "Connect with every tool your team uses — from Salesforce to Slack, Jira to SAP, and everything in between.",
-    gradient: "from-cyan-500/10 to-blue-500/5",
-    border: "hover:border-cyan-500/30",
-  },
-  {
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
       </svg>
     ),
-    title: "Predictive Analytics",
-    description: "AI that surfaces insights before you ask. Forecast trends, detect anomalies, and drive data-informed decisions.",
-    gradient: "from-violet-500/10 to-indigo-500/5",
-    border: "hover:border-violet-500/30",
+    title: "IT Operations Management",
+    description: "Gain full visibility into your IT infrastructure with event management, health log analytics, and cloud optimization.",
+    color: "bg-teal-50 text-teal-700 border-teal-100",
+    iconBg: "bg-teal-100 text-teal-600",
   },
 ];
 
 export default function Features() {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
   return (
-    <section id="features" className="relative py-32 overflow-hidden">
-      <GradientOrb color="purple" size="lg" className="-right-60 top-1/4" />
-
-      <div className="max-w-7xl mx-auto px-6" ref={ref}>
-        <div className="text-center mb-20">
-          <SectionLabel>Platform Capabilities</SectionLabel>
-          <motion.h2
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            custom={0.1}
-            className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6"
-          >
-            Everything you need.
-            <br />
-            <span className="gradient-text">Nothing you don&apos;t.</span>
-          </motion.h2>
-          <motion.p
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            custom={0.2}
-            className="text-lg text-white/50 max-w-2xl mx-auto"
-          >
-            A complete enterprise platform built for speed, security, and scale.
-            Every feature designed to eliminate complexity.
-          </motion.p>
+    <>
+      {/* Trusted By Strip */}
+      <section className="py-12 bg-gray-50 border-y border-gray-100">
+        <div className="max-w-7xl mx-auto px-6">
+          <p className="text-center text-xs font-semibold text-gray-400 uppercase tracking-[0.2em] mb-8">
+            Trusted by leading enterprises worldwide
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
+            {trustedBy.map((name) => (
+              <span key={name} className="text-gray-300 text-xl font-bold tracking-tight hover:text-gray-400 transition-colors cursor-default">
+                {name}
+              </span>
+            ))}
+          </div>
         </div>
+      </section>
 
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {features.map((feature) => (
-            <motion.div
-              key={feature.title}
-              variants={staggerItem}
-              className={`group relative rounded-2xl bg-gradient-to-br ${feature.gradient} border border-white/5 ${feature.border} p-8 transition-all duration-500 hover:-translate-y-1`}
+      {/* Solutions Grid */}
+      <section id="solutions" className="py-20 md:py-28 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <motion.span
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="inline-block text-sm font-semibold text-green-600 uppercase tracking-[0.15em] mb-4"
             >
-              <div className="w-12 h-12 rounded-xl glass flex items-center justify-center text-brand-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-                {feature.icon}
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">
-                {feature.title}
-              </h3>
-              <p className="text-white/50 leading-relaxed">
-                {feature.description}
-              </p>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-    </section>
+              Solutions
+            </motion.span>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-5"
+            >
+              ServiceNow solutions that{" "}
+              <span className="text-green-600">deliver results</span>
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-lg text-gray-500 max-w-2xl mx-auto"
+            >
+              We implement, customize, and optimize ServiceNow across every
+              product line to transform how your enterprise works.
+            </motion.p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {solutions.map((sol, i) => (
+              <motion.div
+                key={sol.title}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.08 }}
+                className={`group rounded-2xl border p-7 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer ${sol.color}`}
+              >
+                <div className={`w-14 h-14 rounded-xl ${sol.iconBg} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform`}>
+                  {sol.icon}
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">{sol.title}</h3>
+                <p className="text-gray-600 leading-relaxed text-sm">{sol.description}</p>
+                <div className="mt-5 flex items-center gap-1 text-sm font-semibold text-green-700 group-hover:gap-2 transition-all">
+                  Learn more
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

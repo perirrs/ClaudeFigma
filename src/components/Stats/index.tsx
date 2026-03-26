@@ -2,36 +2,31 @@
 
 import { motion, useInView, useMotionValue, useTransform, animate } from "framer-motion";
 import { useRef, useEffect } from "react";
-import { fadeUp } from "@/lib/animations";
-import SectionLabel from "@/components/ui/SectionLabel";
 
 interface CounterProps {
   from: number;
   to: number;
   suffix?: string;
-  prefix?: string;
-  duration?: number;
+  decimals?: number;
 }
 
-function AnimatedCounter({ from, to, suffix = "", prefix = "", duration = 2 }: CounterProps) {
+function AnimatedCounter({ from, to, suffix = "", decimals = 0 }: CounterProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
   const count = useMotionValue(from);
   const rounded = useTransform(count, (v) => {
-    if (to >= 1000) return `${(v / 1000).toFixed(1)}k`;
-    if (to < 1) return v.toFixed(1);
+    if (decimals > 0) return v.toFixed(decimals);
     return Math.round(v).toLocaleString();
   });
 
   useEffect(() => {
     if (isInView) {
-      animate(count, to, { duration, ease: [0.25, 0.4, 0.25, 1] });
+      animate(count, to, { duration: 2, ease: [0.25, 0.4, 0.25, 1] });
     }
-  }, [isInView, count, to, duration]);
+  }, [isInView, count, to]);
 
   return (
     <span ref={ref}>
-      {prefix}
       <motion.span>{rounded}</motion.span>
       {suffix}
     </span>
@@ -39,72 +34,51 @@ function AnimatedCounter({ from, to, suffix = "", prefix = "", duration = 2 }: C
 }
 
 const stats = [
-  {
-    value: { from: 0, to: 85000, suffix: "+", prefix: "" },
-    label: "Enterprise customers",
-    description: "Companies trusting our platform",
-  },
-  {
-    value: { from: 0, to: 99.99, suffix: "%", prefix: "" },
-    label: "Uptime SLA",
-    description: "Industry-leading reliability",
-  },
-  {
-    value: { from: 0, to: 500, suffix: "+", prefix: "" },
-    label: "Integrations",
-    description: "Connect your entire stack",
-  },
-  {
-    value: { from: 0, to: 150, suffix: "+", prefix: "" },
-    label: "Countries served",
-    description: "True global infrastructure",
-  },
+  { value: 500, suffix: "+", label: "ServiceNow Implementations", description: "Successfully delivered across industries" },
+  { value: 98, suffix: "%", label: "Client Satisfaction", description: "Based on post-project surveys" },
+  { value: 73, suffix: "%", label: "Average MTTR Reduction", description: "Mean time to resolution improvement" },
+  { value: 150, suffix: "+", label: "Certified Consultants", description: "ServiceNow certified professionals" },
 ];
 
 export default function Stats() {
   return (
-    <section className="relative py-32">
-      {/* Divider line */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
+    <section className="py-20 md:py-28" style={{ background: "linear-gradient(145deg, #1a2e35 0%, #0f1f24 100%)" }}>
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
-          <SectionLabel>By the Numbers</SectionLabel>
-          <motion.h2
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
+          <motion.span
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            custom={0.1}
-            className="text-4xl md:text-5xl font-extrabold text-white"
+            className="inline-block text-sm font-semibold text-green-400 uppercase tracking-[0.15em] mb-4"
           >
-            Scale that speaks for itself
+            Impact
+          </motion.span>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-3xl md:text-4xl lg:text-5xl font-bold text-white"
+          >
+            Results that speak for themselves
           </motion.h2>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              custom={i * 0.1}
-              className="text-center group"
+              transition={{ duration: 0.4, delay: i * 0.1 }}
+              className="text-center"
             >
-              <div className="text-4xl md:text-5xl lg:text-6xl font-extrabold gradient-text mb-3">
-                <AnimatedCounter
-                  from={stat.value.from}
-                  to={stat.value.to}
-                  suffix={stat.value.suffix}
-                  prefix={stat.value.prefix}
-                />
+              <div className="text-4xl md:text-5xl lg:text-6xl font-bold text-green-400 mb-3">
+                <AnimatedCounter from={0} to={stat.value} suffix={stat.suffix} />
               </div>
-              <div className="text-lg font-semibold text-white mb-1">
-                {stat.label}
-              </div>
-              <div className="text-sm text-white/40">{stat.description}</div>
+              <div className="text-base font-semibold text-white mb-1">{stat.label}</div>
+              <div className="text-sm text-gray-500">{stat.description}</div>
             </motion.div>
           ))}
         </div>
