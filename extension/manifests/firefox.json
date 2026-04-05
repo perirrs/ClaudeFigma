@@ -26,6 +26,12 @@
       "matches": ["https://www.naukri.com/*", "https://*.naukri.com/*"],
       "js": ["content-naukri.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-overlay.js"],
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ],
   "action": { "default_title": "Productivity Analyser", "default_popup": "popup.html" },
