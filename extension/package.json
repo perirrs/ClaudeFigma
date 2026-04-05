@@ -1,0 +1,11 @@
+{
+  "name": "productivity-analyser-extension",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Chrome + Firefox extension for Productivity Analyser",
+  "scripts": {
+    "build": "node build.js",
+    "build:chrome": "node build.js && echo 'load extension/dist/chrome in chrome://extensions'",
+    "build:firefox": "node build.js && echo 'load extension/dist/firefox/manifest.json in about:debugging'"
+  }
+}

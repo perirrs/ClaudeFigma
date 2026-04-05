@@ -27,12 +27,17 @@ cloud/         Next.js 14 app (TypeScript, App Router)
   src/app/api/                 ingest + analytics endpoints
   src/app/dashboard|linkedin|naukri|domains|timeline|team/  pages
   src/lib/                     db (SQLite), auth (API key), analytics
-extension/     Chrome MV3 extension
-  background.js                per-URL dwell + idle + outbound batch flush
-  content-linkedin.js          profile / connect / message / search events
-  content-naukri.js            profile / CV / contact / search events
-  options.html|js              configure cloud URL + API key
-  popup.html|js                status + quick dashboard link
+extension/     Chrome + Firefox MV3 extension (shared source)
+  src/
+    background.js              per-URL dwell + idle + outbound batch flush
+    content-linkedin.js        profile / connect / message / search events
+    content-naukri.js          profile / CV / contact / search events
+    options.html|js            configure cloud URL + API key
+    popup.html|js              status + quick dashboard link
+  manifests/
+    chrome.json                MV3 w/ service_worker background
+    firefox.json               MV3 w/ scripts background + gecko settings
+  build.js                     copies src/ + correct manifest into dist/{chrome,firefox}
 ```
 
 ## Architecture
@@ -77,12 +82,30 @@ Response includes a fresh `api_key`. Hand it to the recruiter; they paste it int
 
 ## Installing the extension
 
+The extension ships as a single source tree (`extension/src/`) with two manifests. A tiny build step produces loadable bundles for each browser:
+
+```bash
+cd extension
+node build.js          # writes extension/dist/chrome/ and extension/dist/firefox/
+```
+
+### Chrome / Edge / Brave / other Chromium
+
 1. Open `chrome://extensions` → enable **Developer mode**
-2. **Load unpacked** → select `extension/`
+2. **Load unpacked** → select `extension/dist/chrome/`
 3. Click the extension icon → **Settings** → paste cloud URL + personal API key → **Save & test**
 4. Popup should now say **Connected**
 
-Data starts flowing immediately. Background batches flush every ~30 s; short network outages are buffered (up to 500 records each for dwell + events).
+### Firefox
+
+1. Open `about:debugging#/runtime/this-firefox`
+2. **Load Temporary Add-on…** → select `extension/dist/firefox/manifest.json`
+3. Click the extension icon → **Settings** → paste cloud URL + personal API key → **Save & test**
+4. Popup should now say **Connected**
+
+> Temporary add-ons disappear on restart. For permanent install inside an org, sign the XPI via [addons.mozilla.org](https://addons.mozilla.org/developers/) (self-hosted distribution) or deploy it via an enterprise policy JSON.
+
+Data starts flowing immediately. Background batches flush every ~30 s; short network outages are buffered (up to 500 records each for dwell + events). Any change to shared source in `extension/src/` propagates to **both** Chrome and Firefox bundles on the next `node build.js`.
 
 ## Deploying the cloud app
 
@@ -101,7 +124,9 @@ Data starts flowing immediately. Background batches flush every ~30 s; short net
 | Time in Outlook / Teams / Excel / Zoom / ATS desktop apps | ❌ | ✅ |
 | Active window title outside Chrome | ❌ | ✅ |
 | System idle when Chrome closed | partial (via alarms) | ✅ |
-| Edge / Firefox time | ❌ (unless extension ported) | ✅ |
+| Edge time | ✅ (Chrome bundle works) | — |
+| Firefox time | ✅ (Firefox bundle) | — |
+| Safari time | ❌ | ✅ |
 | Screenshots / keystroke counts | ❌ | optional |
 
 Once we see how much of the real workflow sits inside Chrome, the Windows agent can be scoped precisely — it will just POST to the same `/api/ingest/*` endpoints.

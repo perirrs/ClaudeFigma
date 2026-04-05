@@ -13,8 +13,9 @@
     "http://127.0.0.1/*",
     "https://*/*"
   ],
-  "optional_host_permissions": ["*://*/*"],
-  "background": { "service_worker": "background.js" },
+  "background": {
+    "scripts": ["background.js"]
+  },
   "content_scripts": [
     {
       "matches": ["https://www.linkedin.com/*", "https://*.linkedin.com/*"],
@@ -28,6 +29,12 @@
     }
   ],
   "action": { "default_title": "Productivity Analyser", "default_popup": "popup.html" },
-  "options_page": "options.html",
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "productivity-analyser@yourco.com",
+      "strict_min_version": "115.0"
+    }
+  },
   "icons": {}
 }

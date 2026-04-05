@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Productivity Analyser",
+  "version": "0.2.0",
+  "description": "Tracks per-URL time and recruiter activity on LinkedIn & Naukri, syncing to the Productivity Analyser cloud dashboard.",
+  "permissions": ["tabs", "activeTab", "storage", "idle", "alarms"],
+  "host_permissions": [
+    "https://www.linkedin.com/*",
+    "https://*.linkedin.com/*",
+    "https://www.naukri.com/*",
+    "https://*.naukri.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://*/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/*", "https://*.linkedin.com/*"],
+      "js": ["content-linkedin.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.naukri.com/*", "https://*.naukri.com/*"],
+      "js": ["content-naukri.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": { "default_title": "Productivity Analyser", "default_popup": "popup.html" },
+  "options_page": "options.html",
+  "icons": {}
+}
