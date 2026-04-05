@@ -13,3 +13,6 @@ cloud/.next/
 cloud/tsconfig.tsbuildinfo
 extension/dist/
 extension/releases/
+tray/pa-tray.exe
+tray/pa-tray
+

@@ -10,11 +10,20 @@ type EventRow = {
   ts: number; source: string; type: string; profile_url: string | null;
   profile_name: string | null; profile_title: string | null; meta: string | null;
 };
+type DesktopRow = {
+  ts: number; active_ms: number; idle_ms: number;
+  app: string | null; title: string | null; category: string | null; host: string | null;
+};
 
 function rangeSamples(userId: string, start: number, end: number): SampleRow[] {
   return db()
     .prepare("SELECT ts, duration_ms, url, domain, title, idle FROM samples WHERE user_id = ? AND ts >= ? AND ts < ? ORDER BY ts ASC")
     .all(userId, start, end) as SampleRow[];
+}
+function rangeDesktop(userId: string, start: number, end: number): DesktopRow[] {
+  return db()
+    .prepare("SELECT ts, active_ms, idle_ms, app, title, category, host FROM desktop_activity WHERE user_id = ? AND ts >= ? AND ts < ? ORDER BY ts ASC")
+    .all(userId, start, end) as DesktopRow[];
 }
 function rangeEvents(userId: string, start: number, end: number): EventRow[] {
   return db()
@@ -26,6 +35,7 @@ export function getSummary(userId: string, date?: string) {
   const { start, end } = dayRange(date);
   const samples = rangeSamples(userId, start, end);
   const events = rangeEvents(userId, start, end);
+  const desktop = rangeDesktop(userId, start, end);
 
   let activeMs = 0, idleMs = 0, linkedinMs = 0, naukriMs = 0;
   for (const s of samples) {
@@ -36,12 +46,33 @@ export function getSummary(userId: string, date?: string) {
     if (s.domain && /naukri\.com$/i.test(s.domain)) naukriMs += d;
   }
 
+  // Desktop agent totals. The tray sends buckets from any foreground window
+  // including browsers, so we subtract browser foreground time to avoid
+  // double-counting with the extension's LinkedIn/Naukri figures.
+  let desktopActiveMs = 0, desktopIdleMs = 0, desktopBrowserMs = 0;
+  const appMap = new Map<string, number>();
+  for (const r of desktop) {
+    desktopActiveMs += r.active_ms || 0;
+    desktopIdleMs += r.idle_ms || 0;
+    const app = (r.app || "unknown").toLowerCase();
+    if (/chrome|msedge|firefox|brave|opera|vivaldi|arc/.test(app)) {
+      desktopBrowserMs += r.active_ms || 0;
+    }
+    appMap.set(r.app || "unknown", (appMap.get(r.app || "unknown") || 0) + (r.active_ms || 0));
+  }
+  const desktopNonBrowserMs = Math.max(0, desktopActiveMs - desktopBrowserMs);
+  const topApps = [...appMap.entries()]
+    .map(([app, ms]) => ({ app, ms }))
+    .sort((a, b) => b.ms - a.ms)
+    .slice(0, 10);
+
   const count = (src: string, type: string) => events.filter((e) => e.source === src && e.type === type).length;
   const uniq = (src: string, type: string) => new Set(events.filter((e) => e.source === src && e.type === type).map((e) => e.profile_url)).size;
 
   return {
     date: date || dayKey(),
     activeMs, idleMs, totalMs: activeMs + idleMs,
+    desktopActiveMs, desktopIdleMs, desktopBrowserMs, desktopNonBrowserMs, topApps,
     linkedinMs, naukriMs, otherMs: Math.max(0, activeMs - linkedinMs - naukriMs),
     linkedinConnections: count("linkedin", "connection_sent"),
     linkedinMessages: count("linkedin", "message_sent"),

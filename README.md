@@ -23,6 +23,8 @@ A native Windows companion agent is planned to cover the gap the extension canno
 ## Repo layout
 
 ```
+tray/          Go Windows tray agent (single static .exe, ~7 MB)
+               foreground window + idle polling → /api/ingest/desktop
 cloud/         Next.js 14 app (TypeScript, App Router)
   src/app/api/                 ingest + analytics endpoints
   src/app/dashboard|linkedin|naukri|domains|timeline|team/  pages
@@ -121,9 +123,9 @@ Data starts flowing immediately. Background batches flush every ~30 s; short net
 | LinkedIn profiles, connections, messages, searches | ✅ | — |
 | Naukri profiles, CV downloads, contacts, searches | ✅ | — |
 | Chrome idle (no activity in browser) | ✅ | — |
-| Time in Outlook / Teams / Excel / Zoom / ATS desktop apps | ❌ | ✅ |
-| Active window title outside Chrome | ❌ | ✅ |
-| System idle when Chrome closed | partial (via alarms) | ✅ |
+| Time in Outlook / Teams / Excel / Zoom / ATS desktop apps | ❌ | ✅ (shipped) |
+| Active window title outside Chrome | ❌ | ✅ (shipped) |
+| System idle when Chrome closed | partial (via alarms) | ✅ (shipped) |
 | Edge time | ✅ (Chrome bundle works) | — |
 | Firefox time | ✅ (Firefox bundle) | — |
 | Safari time | ❌ | ✅ |
@@ -141,5 +143,5 @@ Once we see how much of the real workflow sits inside Chrome, the Windows agent 
 
 1. Weekly / monthly rollups + per-recruiter targets
 2. CSV / PDF daily export
-3. Windows companion agent (active-win + powerMonitor) → same ingest endpoints
+3. ~~Windows companion agent~~ → shipped as `tray/` (Go + Win32, see [tray/README.md](tray/README.md))
 4. Anti-tamper check (flags gaps in data stream)

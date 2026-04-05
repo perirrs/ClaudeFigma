@@ -7,6 +7,8 @@ type Summary = {
   date: string; activeMs: number; idleMs: number; linkedinMs: number; naukriMs: number; otherMs: number;
   linkedinConnections: number; linkedinMessages: number; linkedinProfilesViewed: number;
   naukriProfilesViewed: number; naukriDownloads: number; naukriContacts: number; naukriSearches: number; linkedinSearches: number;
+  desktopActiveMs: number; desktopIdleMs: number; desktopBrowserMs: number; desktopNonBrowserMs: number;
+  topApps: { app: string; ms: number }[];
 };
 type DomainRow = { domain: string; ms: number };
 
@@ -54,6 +56,17 @@ export default function DashboardPage() {
               <DomainList rows={domains.slice(0, 8)} />
             </div>
           </div>
+
+          <div className="split">
+            <div className="card">
+              <h2>Desktop (native agent)</h2>
+              <DesktopCard summary={summary} />
+            </div>
+            <div className="card">
+              <h2>Top apps</h2>
+              <AppList rows={summary.topApps || []} />
+            </div>
+          </div>
         </>
       )}
     </Shell>
@@ -80,6 +93,49 @@ function SplitBars({ summary }: { summary: Summary }) {
         );
       })}
     </>
+  );
+}
+
+function DesktopCard({ summary }: { summary: Summary }) {
+  const total = Math.max(1, (summary.desktopActiveMs || 0) + (summary.desktopIdleMs || 0));
+  const rows = [
+    { name: "Non-browser apps", ms: summary.desktopNonBrowserMs || 0, color: "#a855f7" },
+    { name: "Browsers (foreground)", ms: summary.desktopBrowserMs || 0, color: "#38bdf8" },
+    { name: "Idle (system)", ms: summary.desktopIdleMs || 0, color: "#1b2530" },
+  ];
+  if ((summary.desktopActiveMs || 0) + (summary.desktopIdleMs || 0) === 0) {
+    return <div className="empty">No desktop agent data yet. Install the tray app from <code>tray/</code>.</div>;
+  }
+  return (
+    <>
+      {rows.map((r) => {
+        const pct = ((r.ms / total) * 100).toFixed(1);
+        return (
+          <div key={r.name} className="sb">
+            <div className="sb-head"><span className="name">{r.name}</span><span className="val">{fmtDuration(r.ms)} · {pct}%</span></div>
+            <div className="bar"><span style={{ width: `${pct}%`, background: r.color }} /></div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function AppList({ rows }: { rows: { app: string; ms: number }[] }) {
+  if (!rows.length) return <div className="empty">No data yet</div>;
+  const max = Math.max(...rows.map((r) => r.ms), 1);
+  return (
+    <div className="list">
+      {rows.map((r) => {
+        const pct = ((r.ms / max) * 100).toFixed(1);
+        return (
+          <div key={r.app} className="row">
+            <div className="row-line"><span className="name">{r.app}</span><span className="time">{fmtDuration(r.ms)}</span></div>
+            <div className="bar"><span style={{ width: `${pct}%` }} /></div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

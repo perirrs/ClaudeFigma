@@ -58,6 +58,23 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_user_ts ON events(user_id, ts);
 CREATE INDEX IF NOT EXISTS idx_events_source_type ON events(source, type);
+
+-- Native Windows tray agent bucketed samples (1-min buckets).
+-- active_ms + idle_ms together describe how the minute was spent; app/title
+-- describe the foreground window at the end of the bucket.
+CREATE TABLE IF NOT EXISTS desktop_activity (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  ts INTEGER NOT NULL,
+  active_ms INTEGER NOT NULL DEFAULT 0,
+  idle_ms INTEGER NOT NULL DEFAULT 0,
+  app TEXT,
+  title TEXT,
+  category TEXT,
+  host TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_desktop_user_ts ON desktop_activity(user_id, ts);
+CREATE INDEX IF NOT EXISTS idx_desktop_app ON desktop_activity(app);
 `;
 
 function seedAdminIfEmpty(d: Database.Database) {
