@@ -9,10 +9,12 @@
   const SOURCE = "linkedin";
 
   function send(type, payload = {}) {
-    chrome.runtime.sendMessage({
-      type: "pa-event",
-      payload: { source: SOURCE, type, ts: Date.now(), ...payload },
-    });
+    try {
+      chrome.runtime.sendMessage({
+        type: "pa-event",
+        payload: { source: SOURCE, type, ts: Date.now(), ...payload },
+      });
+    } catch {}
   }
 
   function text(el) { return el ? (el.textContent || "").trim().replace(/\s+/g, " ") : null; }
@@ -20,6 +22,7 @@
   // ---- Profile dwell tracking ----
   let currentProfile = null;
   let profileStart = null;
+  let extractTimer = null;
 
   function profileUrlFromLocation() {
     const m = location.pathname.match(/^\/in\/([^/?#]+)/);
@@ -27,20 +30,35 @@
   }
 
   function extractProfile() {
-    // Headline selectors change over time; try a few.
+    // Headline selectors change over time; try several known variants.
     const name =
       text(document.querySelector("h1.text-heading-xlarge")) ||
       text(document.querySelector("main h1")) ||
-      text(document.querySelector('[data-generated-suggestion-target]'));
+      text(document.querySelector("section.artdeco-card h1")) ||
+      text(document.querySelector('[data-generated-suggestion-target]')) ||
+      text(document.querySelector('.pv-top-card--list h1')) ||
+      text(document.querySelector('.ph5 h1'));
     const title =
       text(document.querySelector("div.text-body-medium.break-words")) ||
+      text(document.querySelector("main h1 ~ div.text-body-medium")) ||
       text(document.querySelector("main h1 + div")) ||
-      text(document.querySelector('.pv-text-details__left-panel .text-body-medium'));
+      text(document.querySelector('.pv-text-details__left-panel .text-body-medium')) ||
+      text(document.querySelector('.ph5 .text-body-medium'));
     return { name, title };
   }
 
+  function updateCurrentProfileMeta() {
+    if (!currentProfile) return;
+    const { name, title } = extractProfile();
+    if (name && !currentProfile.name) currentProfile.name = name;
+    if (title && !currentProfile.title) currentProfile.title = title;
+  }
+
   function flushProfile() {
+    if (extractTimer) { clearInterval(extractTimer); extractTimer = null; }
     if (!currentProfile || profileStart == null) return;
+    // One more attempt to grab any fields that finally rendered.
+    updateCurrentProfileMeta();
     const dwell = Date.now() - profileStart;
     if (dwell < 1500) { currentProfile = null; profileStart = null; return; }
     send("profile_viewed", {
@@ -58,37 +76,101 @@
     if (!url) { flushProfile(); return; }
     if (currentProfile && currentProfile.url === url) return;
     flushProfile();
-    // Wait a beat for LinkedIn's SPA to render the header.
-    setTimeout(() => {
-      const { name, title } = extractProfile();
-      currentProfile = { url, name, title };
-      profileStart = Date.now();
-    }, 1200);
+    currentProfile = { url, name: null, title: null };
+    profileStart = Date.now();
+    // LinkedIn's SPA renders the header lazily. Keep retrying extraction
+    // until we get both fields or we time out after 12s.
+    let attempts = 0;
+    extractTimer = setInterval(() => {
+      attempts += 1;
+      updateCurrentProfileMeta();
+      if ((currentProfile && currentProfile.name && currentProfile.title) || attempts >= 24) {
+        clearInterval(extractTimer);
+        extractTimer = null;
+      }
+    }, 500);
   }
 
   // React to LinkedIn's client-side navigation.
   const _push = history.pushState;
   history.pushState = function () { _push.apply(this, arguments); setTimeout(maybeStartProfile, 300); };
+  const _replace = history.replaceState;
+  history.replaceState = function () { _replace.apply(this, arguments); setTimeout(maybeStartProfile, 300); };
   window.addEventListener("popstate", () => setTimeout(maybeStartProfile, 300));
   window.addEventListener("beforeunload", flushProfile);
+  window.addEventListener("pagehide", flushProfile);
   window.addEventListener("visibilitychange", () => { if (document.hidden) flushProfile(); });
   maybeStartProfile();
 
   // ---- Connection & message detection ----
-  // Observe clicks on known action buttons/labels.
-  document.addEventListener("click", (e) => {
-    const target = e.target.closest("button, a");
-    if (!target) return;
-    const label = (target.getAttribute("aria-label") || target.textContent || "").trim().toLowerCase();
+  // We listen globally for clicks and inspect the clicked element's ancestry
+  // to classify it as a connection-send or a message-send. LinkedIn changes
+  // DOM classes frequently, so we rely on text/aria-labels and dialog context.
 
-    if (/^connect$/.test(label) || /^invite .* to connect$/.test(label)) {
+  function labelOf(el) {
+    if (!el) return "";
+    return (el.getAttribute("aria-label") || el.getAttribute("title") || el.textContent || "")
+      .trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  function isSendLabel(label) {
+    if (!label) return false;
+    // Matches: "send", "send now", "send invitation", "send without a note",
+    // "send invite", "send message", "send message to …"
+    return /^send\b/.test(label) || label === "send";
+  }
+
+  function dialogContext(el) {
+    // Walk up to the nearest dialog/modal container and inspect its text.
+    const dlg = el.closest('[role="dialog"], .artdeco-modal, .msg-overlay-conversation-bubble');
+    if (!dlg) return null;
+    const blob = ((dlg.getAttribute("aria-label") || "") + " " + (dlg.textContent || ""))
+      .toLowerCase().slice(0, 2000);
+    return { el: dlg, blob };
+  }
+
+  function isMessagingContainer(el) {
+    return !!el.closest(
+      '.msg-form, .msg-form__contenteditable, .msg-overlay-conversation-bubble, ' +
+      '.msg-convo-wrapper, [data-test-messaging-message-composer], ' +
+      '.msg-thread, .message-form-container'
+    );
+  }
+
+  document.addEventListener("click", (e) => {
+    const target = e.target.closest("button, a, [role='button']");
+    if (!target) return;
+    const label = labelOf(target);
+
+    // "Connect" button clicked (pre-invite).
+    if (/^connect$/.test(label) || /^invite .* to connect$/.test(label) || /^follow$/.test(label) === false && /invite .* to connect/.test(label)) {
       send("connect_clicked", { profile_url: profileUrlFromLocation() });
     }
-    if (label === "send" || label === "send now" || label === "send invitation" || label === "send without a note") {
-      // Heuristic: if we're inside an invitation modal, count as connection_sent.
-      const inInvite = document.querySelector('[aria-labelledby*="invite"], [role="dialog"] [data-test-modal]');
-      if (inInvite) {
+
+    if (!isSendLabel(label)) return;
+
+    // Case 1: click happened inside the messaging composer → message_sent.
+    if (isMessagingContainer(target)) {
+      send("message_sent", {
+        profile_url: profileUrlFromLocation(),
+        profile_name: currentProfile && currentProfile.name,
+        profile_title: currentProfile && currentProfile.title,
+      });
+      return;
+    }
+
+    // Case 2: click happened inside a dialog. Inspect the dialog text to
+    // decide between an invitation send and a message send.
+    const ctx = dialogContext(target);
+    if (ctx) {
+      if (/invit|connect|add a note|personalize/.test(ctx.blob)) {
         send("connection_sent", {
+          profile_url: profileUrlFromLocation(),
+          profile_name: currentProfile && currentProfile.name,
+          profile_title: currentProfile && currentProfile.title,
+        });
+      } else if (/message|write a message|new message/.test(ctx.blob)) {
+        send("message_sent", {
           profile_url: profileUrlFromLocation(),
           profile_name: currentProfile && currentProfile.name,
           profile_title: currentProfile && currentProfile.title,
@@ -97,11 +179,12 @@
     }
   }, true);
 
-  // Messaging - observe Enter-to-send in the compose box.
+  // Messaging: Enter-to-send in any contenteditable composer.
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" || e.shiftKey) return;
     const editor = e.target.closest('.msg-form__contenteditable, [contenteditable="true"]');
     if (!editor) return;
+    if (!isMessagingContainer(editor)) return;
     send("message_sent", {
       profile_url: profileUrlFromLocation(),
       profile_name: currentProfile && currentProfile.name,

@@ -35,7 +35,7 @@ function todayKey() {
 }
 
 function emptySnapshot(date) {
-  return { date, linkedinMs: 0, naukriMs: 0, liProfiles: [], nkProfiles: [], liConnections: 0, liMessages: 0, nkDownloads: 0 };
+  return { date, activeMs: 0, linkedinMs: 0, naukriMs: 0, liProfiles: [], nkProfiles: [], liConnections: 0, liMessages: 0, nkDownloads: 0 };
 }
 
 async function loadSnapshot() {
@@ -53,7 +53,9 @@ async function saveSnapshot() {
 }
 
 function bumpDomainTime(domain, ms) {
-  if (!domain || !today) return;
+  if (!today || !ms) return;
+  today.activeMs += ms;
+  if (!domain) return;
   if (/linkedin\.com$/i.test(domain)) today.linkedinMs += ms;
   if (/naukri\.com$/i.test(domain)) today.naukriMs += ms;
 }
@@ -76,6 +78,7 @@ function snapshotForOverlay() {
   if (!today || today.date !== todayKey()) today = emptySnapshot(todayKey());
   return {
     date: today.date,
+    activeMs: today.activeMs,
     linkedinMs: today.linkedinMs,
     naukriMs: today.naukriMs,
     liUniqueProfiles: today.liProfiles.length,
@@ -198,6 +201,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     const live = snapshotForOverlay();
     if (!userIdle && activeUrl && activeStart) {
       const extra = now() - activeStart;
+      live.activeMs += extra;
       const domain = domainOf(activeUrl);
       if (domain && /linkedin\.com$/i.test(domain)) live.linkedinMs += extra;
       if (domain && /naukri\.com$/i.test(domain)) live.naukriMs += extra;

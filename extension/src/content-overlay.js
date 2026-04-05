@@ -51,6 +51,7 @@
     .section:last-child { margin-bottom: 0; }
     .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
     .label { font-size: 11px; font-weight: 600; }
+    .label.all { color: #e6edf3; }
     .label.li { color: #4ade80; }
     .label.nk { color: #60a5fa; }
     .big { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -73,6 +74,13 @@
       <button class="btn" id="close" title="Hide for this session">×</button>
     </div>
     <div class="body" id="body">
+      <div class="section">
+        <div class="section-head">
+          <span class="label all">Browser</span>
+          <span class="big" id="all-time">0m</span>
+        </div>
+      </div>
+      <div class="sep"></div>
       <div class="section">
         <div class="section-head">
           <span class="label li">LinkedIn</span>
@@ -166,6 +174,7 @@
       if (!snap) return;
       if (snap.showOverlay === false) { host.style.display = "none"; return; }
       host.style.display = "";
+      shadow.getElementById("all-time").textContent = fmt(snap.activeMs);
       shadow.getElementById("li-time").textContent = fmt(snap.linkedinMs);
       shadow.getElementById("nk-time").textContent = fmt(snap.naukriMs);
       shadow.getElementById("li-prof").textContent = snap.liUniqueProfiles;
