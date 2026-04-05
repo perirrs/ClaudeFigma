@@ -3,23 +3,26 @@
   <head>
     <meta charset="utf-8" />
     <style>
-      body { font-family: -apple-system, system-ui, sans-serif; width: 260px; margin: 0; padding: 14px; background: #0b1016; color: #e6edf3; }
-      h1 { font-size: 13px; margin: 0 0 8px; color: #4ade80; }
-      .row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #1b2530; }
+      body { font-family: -apple-system, system-ui, sans-serif; width: 280px; margin: 0; padding: 14px; background: #0b1016; color: #e6edf3; }
+      h1 { font-size: 13px; margin: 0 0 10px; color: #4ade80; }
+      .row { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #1b2530; }
       .row:last-child { border-bottom: none; }
       .muted { color: #8b98a5; }
       .ok { color: #4ade80; }
       .bad { color: #f87171; }
+      a { color: #4ade80; font-size: 12px; text-decoration: none; }
+      .actions { margin-top: 10px; display: flex; justify-content: space-between; }
     </style>
   </head>
   <body>
     <h1>Productivity Analyser</h1>
-    <div class="row"><span class="muted">Desktop app</span><span id="status" class="bad">Checking…</span></div>
-    <div class="row"><span class="muted">Tracking host</span><span id="host">—</span></div>
-    <div class="row"><span class="muted">Bridge</span><span>127.0.0.1:47624</span></div>
-    <p class="muted" style="font-size:11px;line-height:1.5;margin-top:10px;">
-      Self-monitoring only. Open the desktop app to see your analytics.
-    </p>
+    <div class="row"><span class="muted">Cloud</span><span id="status" class="bad">Checking…</span></div>
+    <div class="row"><span class="muted">Host</span><span id="host">—</span></div>
+    <div class="row"><span class="muted">User</span><span id="user">—</span></div>
+    <div class="actions">
+      <a href="#" id="open-options">Settings</a>
+      <a href="#" id="open-dashboard">Open dashboard</a>
+    </div>
     <script src="popup.js"></script>
   </body>
 </html>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Productivity Analyser — Settings</title>
+    <style>
+      body { font-family: -apple-system, system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 20px; background: #0b1016; color: #e6edf3; }
+      h1 { font-size: 18px; color: #4ade80; margin: 0 0 8px; }
+      p { color: #8b98a5; font-size: 13px; line-height: 1.5; }
+      label { display: block; font-size: 11px; color: #8b98a5; text-transform: uppercase; letter-spacing: 0.08em; margin: 18px 0 6px; }
+      input { width: 100%; background: #121a25; border: 1px solid #1b2530; color: #e6edf3; border-radius: 6px; padding: 10px 12px; font-size: 13px; }
+      button { background: #4ade80; color: #000; border: none; border-radius: 6px; padding: 10px 16px; font-weight: 600; font-size: 13px; margin-top: 20px; cursor: pointer; }
+      .status { font-size: 12px; margin-top: 12px; }
+      .ok { color: #4ade80; }
+      .bad { color: #f87171; }
+    </style>
+  </head>
+  <body>
+    <h1>Productivity Analyser — Settings</h1>
+    <p>Point the extension at your cloud dashboard and paste your personal API key. Your recruiter admin can create keys via <code>POST /api/users</code>.</p>
+    <label>Cloud URL</label>
+    <input id="cloudUrl" placeholder="https://pa.example.com" />
+    <label>API key</label>
+    <input id="apiKey" type="password" placeholder="paste your personal key…" />
+    <button id="save">Save &amp; test</button>
+    <div id="status" class="status"></div>
+    <script src="options.js"></script>
+  </body>
+</html>

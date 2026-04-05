@@ -1,48 +1,12 @@
 {
   "name": "productivity-analyser",
-  "version": "0.1.0",
-  "description": "Desktop productivity analyser for recruitment & staffing teams. Tracks time on LinkedIn, Naukri, idle time, connections and messages.",
-  "main": "electron/main.js",
+  "version": "0.2.0",
+  "description": "Chrome extension + cloud dashboard for recruitment team productivity tracking",
+  "private": true,
+  "workspaces": ["cloud"],
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev",
-    "build": "electron-builder",
-    "build:mac": "electron-builder --mac",
-    "build:win": "electron-builder --win",
-    "build:linux": "electron-builder --linux"
-  },
-  "keywords": [
-    "productivity",
-    "recruitment",
-    "time-tracking",
-    "linkedin",
-    "naukri",
-    "electron"
-  ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "active-win": "^8.2.0",
-    "better-sqlite3": "^11.3.0",
-    "chart.js": "^4.4.4"
-  },
-  "devDependencies": {
-    "electron": "^32.1.2",
-    "electron-builder": "^25.0.5"
-  },
-  "build": {
-    "appId": "com.productivityanalyser.app",
-    "productName": "Productivity Analyser",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "electron/**/*",
-      "renderer/**/*",
-      "package.json"
-    ],
-    "mac": { "category": "public.app-category.productivity" },
-    "win": { "target": "nsis" },
-    "linux": { "target": "AppImage" }
+    "dev": "npm --workspace cloud run dev",
+    "build": "npm --workspace cloud run build",
+    "start": "npm --workspace cloud run start"
   }
 }
