@@ -16,6 +16,21 @@
 
   const host = document.createElement("div");
   host.id = HOST_ID;
+  const HOST_STYLE =
+    "all: initial !important;" +
+    "position: fixed !important;" +
+    "top: 20px !important;" +
+    "right: 20px !important;" +
+    "width: 0 !important;" +
+    "height: 0 !important;" +
+    "z-index: 2147483647 !important;" +
+    "display: block !important;" +
+    "pointer-events: auto !important;" +
+    "visibility: visible !important;" +
+    "opacity: 1 !important;";
+  // Force the host's critical layout properties with !important so no page
+  // CSS, React re-render, or LinkedIn stylesheet can hide / reposition it.
+  host.setAttribute("style", HOST_STYLE);
   // Isolate styles from the host page with a shadow DOM.
   const shadow = host.attachShadow({ mode: "open" });
 
@@ -26,8 +41,7 @@
       position: fixed; top: 20px; right: 20px; z-index: 2147483647;
       width: 232px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: #e6edf3; font-size: 12px; line-height: 1.4;
-      background: rgba(13, 20, 28, 0.72); backdrop-filter: blur(14px) saturate(140%);
-      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      background: rgba(13, 20, 28, 0.92);
       border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(74,222,128,0.06) inset;
       user-select: none;
@@ -110,6 +124,7 @@
   // Attach to <html> instead of <body> so LinkedIn's React root can't
   // take our overlay with it when it re-renders body.
   document.documentElement.appendChild(host);
+  try { console.log("[PA] overlay injected on", location.hostname); } catch {}
 
   let closedManually = false;
   const reattachObserver = new MutationObserver(() => {
@@ -120,6 +135,16 @@
     }
   });
   reattachObserver.observe(document.documentElement, { childList: true, subtree: false });
+
+  // If anything overwrites the host's style attribute (e.g. a stray
+  // host.style.display = "none" from an earlier version), restore it.
+  const styleObserver = new MutationObserver(() => {
+    if (closedManually) return;
+    if (host.getAttribute("style") !== HOST_STYLE) {
+      host.setAttribute("style", HOST_STYLE);
+    }
+  });
+  styleObserver.observe(host, { attributes: true, attributeFilter: ["style"] });
 
   function extensionAlive() {
     try { return !!(chrome && chrome.runtime && chrome.runtime.id); } catch { return false; }
@@ -192,6 +217,7 @@
     host.remove();
     clearInterval(pollTimer);
     reattachObserver.disconnect();
+    styleObserver.disconnect();
   });
 
   // ---- Data polling ----
@@ -206,8 +232,10 @@
     try {
       const snap = await chrome.runtime.sendMessage({ type: "pa-get-stats" });
       if (!snap) return;
-      if (snap.showOverlay === false) { host.style.display = "none"; return; }
-      host.style.display = "";
+      // NOTE: we intentionally ignore snap.showOverlay here. Earlier users
+      // saved it as false and the overlay became invisible on every load.
+      // To hide the overlay, use the × button (per-tab) or remove the
+      // content_script entry.
       shadow.getElementById("all-time").textContent = fmt(snap.activeMs);
       shadow.getElementById("li-time").textContent = fmt(snap.linkedinMs);
       shadow.getElementById("nk-time").textContent = fmt(snap.naukriMs);
