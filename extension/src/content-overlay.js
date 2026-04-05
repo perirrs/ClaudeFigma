@@ -109,9 +109,27 @@
   shadow.appendChild(wrap);
   document.body.appendChild(host);
 
+  function extensionAlive() {
+    try { return !!(chrome && chrome.runtime && chrome.runtime.id); } catch { return false; }
+  }
+  function safeStorageGet(keys) {
+    if (!extensionAlive()) return Promise.resolve({});
+    try {
+      const p = chrome.storage.local.get(keys);
+      return p && typeof p.then === "function" ? p.catch(() => ({})) : Promise.resolve({});
+    } catch { return Promise.resolve({}); }
+  }
+  function safeStorageSet(obj) {
+    if (!extensionAlive()) return;
+    try {
+      const p = chrome.storage.local.set(obj);
+      if (p && typeof p.then === "function") p.catch(() => {});
+    } catch {}
+  }
+
   // ---- Position persistence + drag ----
   const head = shadow.getElementById("head");
-  chrome.storage.local.get([STORAGE_POS, STORAGE_COLLAPSED]).then((v) => {
+  safeStorageGet([STORAGE_POS, STORAGE_COLLAPSED]).then((v) => {
     const pos = v[STORAGE_POS];
     if (pos && typeof pos.left === "number" && typeof pos.top === "number") {
       wrap.style.left = pos.left + "px";
@@ -149,13 +167,13 @@
     if (!dragging) return;
     dragging = false;
     head.classList.remove("dragging");
-    chrome.storage.local.set({ [STORAGE_POS]: { left: parseInt(wrap.style.left, 10), top: parseInt(wrap.style.top, 10) } });
+    safeStorageSet({ [STORAGE_POS]: { left: parseInt(wrap.style.left, 10), top: parseInt(wrap.style.top, 10) } });
   });
 
   // ---- Toggle + close ----
   shadow.getElementById("toggle").addEventListener("click", () => {
     wrap.classList.toggle("collapsed");
-    chrome.storage.local.set({ [STORAGE_COLLAPSED]: wrap.classList.contains("collapsed") });
+    safeStorageSet({ [STORAGE_COLLAPSED]: wrap.classList.contains("collapsed") });
   });
   shadow.getElementById("close").addEventListener("click", () => {
     host.remove();
@@ -167,10 +185,6 @@
     if (!ms || ms < 0) ms = 0;
     const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
-  }
-
-  function extensionAlive() {
-    try { return !!(chrome && chrome.runtime && chrome.runtime.id); } catch { return false; }
   }
 
   async function refresh() {
