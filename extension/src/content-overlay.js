@@ -6,7 +6,7 @@
 (function () {
   // Don't inject into frames, chrome-internal pages, or PDFs.
   if (window.self !== window.top) return;
-  if (!document.body) return;
+  if (!document.documentElement) return;
   if (document.getElementById("pa-overlay-root")) return;
 
   const HOST_ID = "pa-overlay-root";
@@ -107,17 +107,19 @@
     </div>
   `;
   shadow.appendChild(wrap);
-  document.body.appendChild(host);
+  // Attach to <html> instead of <body> so LinkedIn's React root can't
+  // take our overlay with it when it re-renders body.
+  document.documentElement.appendChild(host);
 
-  // LinkedIn's SPA sometimes rips out parts of the body tree on navigation,
-  // taking our overlay host with it. Watch for that and re-attach.
+  let closedManually = false;
   const reattachObserver = new MutationObserver(() => {
-    if (!document.body) return;
-    if (!document.body.contains(host)) {
-      try { document.body.appendChild(host); } catch {}
+    if (closedManually) return;
+    if (!document.documentElement) return;
+    if (!document.documentElement.contains(host)) {
+      try { document.documentElement.appendChild(host); } catch {}
     }
   });
-  reattachObserver.observe(document.body, { childList: true, subtree: false });
+  reattachObserver.observe(document.documentElement, { childList: true, subtree: false });
 
   function extensionAlive() {
     try { return !!(chrome && chrome.runtime && chrome.runtime.id); } catch { return false; }
@@ -186,8 +188,10 @@
     safeStorageSet({ [STORAGE_COLLAPSED]: wrap.classList.contains("collapsed") });
   });
   shadow.getElementById("close").addEventListener("click", () => {
+    closedManually = true;
     host.remove();
     clearInterval(pollTimer);
+    reattachObserver.disconnect();
   });
 
   // ---- Data polling ----
@@ -198,7 +202,7 @@
   }
 
   async function refresh() {
-    if (!extensionAlive()) { clearInterval(pollTimer); host.remove(); return; }
+    if (!extensionAlive()) { return; }
     try {
       const snap = await chrome.runtime.sendMessage({ type: "pa-get-stats" });
       if (!snap) return;

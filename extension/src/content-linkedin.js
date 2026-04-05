@@ -48,21 +48,47 @@
   }
 
   function extractProfile() {
-    // Strategy 1: known DOM selectors (most reliable when they match).
-    let name =
-      text(document.querySelector("h1.text-heading-xlarge")) ||
-      text(document.querySelector("main h1")) ||
-      text(document.querySelector("section.artdeco-card h1")) ||
-      text(document.querySelector('[data-generated-suggestion-target]')) ||
-      text(document.querySelector('.pv-top-card--list h1')) ||
-      text(document.querySelector('.ph5 h1'));
-    let title =
-      text(document.querySelector("div.text-body-medium.break-words")) ||
-      text(document.querySelector("main h1 ~ div.text-body-medium")) ||
-      text(document.querySelector("main h1 + div")) ||
-      text(document.querySelector('.pv-text-details__left-panel .text-body-medium')) ||
-      text(document.querySelector('.ph5 .text-body-medium'));
-    if (!looksLikeRealTitle(title)) title = null;
+    // Strategy 1: find the profile h1, then walk upward looking for the
+    // first sibling/descendant div that looks like a headline. This is the
+    // most reliable since LinkedIn always puts the headline directly
+    // adjacent to the name h1.
+    const h1 =
+      document.querySelector("h1.text-heading-xlarge") ||
+      document.querySelector("main h1") ||
+      document.querySelector("section.artdeco-card h1") ||
+      document.querySelector('.pv-top-card--list h1') ||
+      document.querySelector('.ph5 h1');
+
+    let name = h1 ? text(h1) : null;
+    let title = null;
+
+    if (h1) {
+      // Walk up to 4 levels looking for .text-body-medium siblings.
+      let scope = h1.parentElement;
+      for (let i = 0; i < 4 && scope && !title; i++) {
+        const candidates = scope.querySelectorAll('.text-body-medium, [class*="headline"]');
+        for (const c of candidates) {
+          if (c === h1 || h1.contains(c)) continue;
+          const t = text(c);
+          if (looksLikeRealTitle(t)) { title = t; break; }
+        }
+        scope = scope.parentElement;
+      }
+    }
+
+    // Strategy 1b: the original flat selectors as a fallback.
+    if (!name) {
+      name =
+        text(document.querySelector("h1.text-heading-xlarge")) ||
+        text(document.querySelector("main h1")) ||
+        text(document.querySelector('[data-generated-suggestion-target]'));
+    }
+    if (!title) {
+      title =
+        text(document.querySelector("div.text-body-medium.break-words")) ||
+        text(document.querySelector('.pv-text-details__left-panel .text-body-medium'));
+      if (!looksLikeRealTitle(title)) title = null;
+    }
 
     // Strategy 2: document.title / og:title ("Name - Title at Company | LinkedIn").
     if (!name || !title) {
@@ -108,6 +134,9 @@
     const { name, title } = extractProfile();
     if (name && !currentProfile.name) currentProfile.name = name;
     if (title && !currentProfile.title) currentProfile.title = title;
+    // Stash last extraction result so the user can inspect it in DevTools
+    // via window.__paLast when "(unknown)" or "—" shows up.
+    try { window.__paLast = { ...currentProfile, ts: Date.now() }; } catch {}
   }
 
   function flushProfile() {
@@ -177,6 +206,7 @@
     armedProfileUrl = (currentProfile && currentProfile.url) || profileUrlFromLocation();
     armedProfileName = currentProfile && currentProfile.name;
     armedProfileTitle = currentProfile && currentProfile.title;
+    try { window.__paArmed = { at: armedAt, url: armedProfileUrl, name: armedProfileName, title: armedProfileTitle }; } catch {}
   }
   function disarm() {
     armedAt = 0; armedProfileUrl = null; armedProfileName = null; armedProfileTitle = null;
