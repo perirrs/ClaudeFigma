@@ -8,12 +8,18 @@
 (function () {
   const SOURCE = "linkedin";
 
+  function extensionAlive() {
+    try { return !!(chrome && chrome.runtime && chrome.runtime.id); } catch { return false; }
+  }
+
   function send(type, payload = {}) {
+    if (!extensionAlive()) return;
     try {
-      chrome.runtime.sendMessage({
+      const p = chrome.runtime.sendMessage({
         type: "pa-event",
         payload: { source: SOURCE, type, ts: Date.now(), ...payload },
       });
+      if (p && typeof p.then === "function") p.catch(() => {});
     } catch {}
   }
 

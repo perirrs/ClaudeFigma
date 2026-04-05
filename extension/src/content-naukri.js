@@ -7,11 +7,19 @@
 (function () {
   const SOURCE = "naukri";
 
+  function extensionAlive() {
+    try { return !!(chrome && chrome.runtime && chrome.runtime.id); } catch { return false; }
+  }
+
   function send(type, payload = {}) {
-    chrome.runtime.sendMessage({
-      type: "pa-event",
-      payload: { source: SOURCE, type, ts: Date.now(), ...payload },
-    });
+    if (!extensionAlive()) return;
+    try {
+      const p = chrome.runtime.sendMessage({
+        type: "pa-event",
+        payload: { source: SOURCE, type, ts: Date.now(), ...payload },
+      });
+      if (p && typeof p.then === "function") p.catch(() => {});
+    } catch {}
   }
 
   function text(el) { return el ? (el.textContent || "").trim().replace(/\s+/g, " ") : null; }

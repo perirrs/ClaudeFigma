@@ -169,7 +169,12 @@
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 
+  function extensionAlive() {
+    try { return !!(chrome && chrome.runtime && chrome.runtime.id); } catch { return false; }
+  }
+
   async function refresh() {
+    if (!extensionAlive()) { clearInterval(pollTimer); host.remove(); return; }
     try {
       const snap = await chrome.runtime.sendMessage({ type: "pa-get-stats" });
       if (!snap) return;
