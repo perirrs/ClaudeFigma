@@ -55,9 +55,10 @@
     .label.li { color: #4ade80; }
     .label.nk { color: #60a5fa; }
     .big { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .stats { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: #8b98a5; }
-    .stats span { white-space: nowrap; }
-    .stats b { color: #e6edf3; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .rows { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #8b98a5; }
+    .row { display: flex; justify-content: space-between; align-items: baseline; }
+    .row span:first-child { color: #8b98a5; }
+    .row b { color: #e6edf3; font-weight: 600; font-variant-numeric: tabular-nums; }
     .sep { height: 1px; background: rgba(255,255,255,0.05); margin: 6px 0; }
     .off { padding: 10px 12px; color: #8b98a5; font-size: 11px; }
     .wrap.collapsed .body { display: none; }
@@ -86,10 +87,10 @@
           <span class="label li">LinkedIn</span>
           <span class="big" id="li-time">0m</span>
         </div>
-        <div class="stats">
-          <span>profiles · <b id="li-prof">0</b></span>
-          <span>conn · <b id="li-conn">0</b></span>
-          <span>msg · <b id="li-msg">0</b></span>
+        <div class="rows">
+          <div class="row"><span>Profiles viewed</span><b id="li-prof">0</b></div>
+          <div class="row"><span>Connections sent</span><b id="li-conn">0</b></div>
+          <div class="row"><span>Messages sent</span><b id="li-msg">0</b></div>
         </div>
       </div>
       <div class="sep"></div>
@@ -98,9 +99,9 @@
           <span class="label nk">Naukri</span>
           <span class="big" id="nk-time">0m</span>
         </div>
-        <div class="stats">
-          <span>profiles · <b id="nk-prof">0</b></span>
-          <span>CVs · <b id="nk-dl">0</b></span>
+        <div class="rows">
+          <div class="row"><span>Profiles viewed</span><b id="nk-prof">0</b></div>
+          <div class="row"><span>CVs downloaded</span><b id="nk-dl">0</b></div>
         </div>
       </div>
     </div>

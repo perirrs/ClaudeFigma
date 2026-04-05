@@ -30,20 +30,45 @@
   }
 
   function extractProfile() {
-    // Headline selectors change over time; try several known variants.
-    const name =
+    // Strategy 1: known DOM selectors (most reliable when they match).
+    let name =
       text(document.querySelector("h1.text-heading-xlarge")) ||
       text(document.querySelector("main h1")) ||
       text(document.querySelector("section.artdeco-card h1")) ||
       text(document.querySelector('[data-generated-suggestion-target]')) ||
       text(document.querySelector('.pv-top-card--list h1')) ||
       text(document.querySelector('.ph5 h1'));
-    const title =
+    let title =
       text(document.querySelector("div.text-body-medium.break-words")) ||
       text(document.querySelector("main h1 ~ div.text-body-medium")) ||
       text(document.querySelector("main h1 + div")) ||
       text(document.querySelector('.pv-text-details__left-panel .text-body-medium')) ||
       text(document.querySelector('.ph5 .text-body-medium'));
+
+    // Strategy 2: fall back to document.title / og:title. LinkedIn sets
+    // document.title to things like "Satya Nadella - Chairman & CEO at
+    // Microsoft | LinkedIn" which reliably gives us both fields.
+    if (!name || !title) {
+      const og = document.querySelector('meta[property="og:title"]');
+      const rawTitle = (og && og.getAttribute("content")) || document.title || "";
+      const cleaned = rawTitle
+        .replace(/\s*\|\s*LinkedIn\s*$/i, "")
+        .replace(/\(\d+\)\s*/, "")
+        .trim();
+      if (cleaned && !/^linkedin/i.test(cleaned)) {
+        // Common patterns:
+        //  "Name - Title at Company"
+        //  "Name | Title"
+        //  "Name – Title"
+        const m = cleaned.match(/^(.+?)\s+[-–|]\s+(.+)$/);
+        if (m) {
+          if (!name) name = m[1].trim();
+          if (!title) title = m[2].trim();
+        } else if (!name) {
+          name = cleaned;
+        }
+      }
+    }
     return { name, title };
   }
 

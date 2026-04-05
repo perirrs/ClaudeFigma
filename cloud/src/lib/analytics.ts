@@ -80,18 +80,20 @@ export function getTimeline(userId: string, date?: string) {
 export function getLinkedInActivity(userId: string, date?: string) {
   const { start, end } = dayRange(date);
   const events = rangeEvents(userId, start, end).filter((e) => e.source === "linkedin");
-  const profileMap = new Map<string, { url: string; name: string | null; title: string | null; views: number; ms: number }>();
+  const profileMap = new Map<string, { url: string; name: string | null; title: string | null; views: number; ms: number; firstSeen: number; lastSeen: number }>();
   for (const e of events) {
     if (e.type !== "profile_viewed" || !e.profile_url) continue;
-    const prev = profileMap.get(e.profile_url) || { url: e.profile_url, name: e.profile_name, title: e.profile_title, views: 0, ms: 0 };
+    const prev = profileMap.get(e.profile_url) || { url: e.profile_url, name: e.profile_name, title: e.profile_title, views: 0, ms: 0, firstSeen: e.ts, lastSeen: e.ts };
     prev.views += 1;
     try { prev.ms += (e.meta ? JSON.parse(e.meta).dwell_ms || 0 : 0); } catch {}
     prev.name = e.profile_name || prev.name;
     prev.title = e.profile_title || prev.title;
+    if (e.ts < prev.firstSeen) prev.firstSeen = e.ts;
+    if (e.ts > prev.lastSeen) prev.lastSeen = e.ts;
     profileMap.set(e.profile_url, prev);
   }
   return {
-    profiles: [...profileMap.values()].sort((a, b) => b.ms - a.ms),
+    profiles: [...profileMap.values()].sort((a, b) => b.lastSeen - a.lastSeen),
     connectionsSent: events.filter((e) => e.type === "connection_sent").length,
     messagesSent: events.filter((e) => e.type === "message_sent").length,
     searches: events.filter((e) => e.type === "search_ran").length,
@@ -101,18 +103,20 @@ export function getLinkedInActivity(userId: string, date?: string) {
 export function getNaukriActivity(userId: string, date?: string) {
   const { start, end } = dayRange(date);
   const events = rangeEvents(userId, start, end).filter((e) => e.source === "naukri");
-  const profileMap = new Map<string, { url: string; name: string | null; title: string | null; views: number; ms: number }>();
+  const profileMap = new Map<string, { url: string; name: string | null; title: string | null; views: number; ms: number; firstSeen: number; lastSeen: number }>();
   for (const e of events) {
     if (e.type !== "profile_viewed" || !e.profile_url) continue;
-    const prev = profileMap.get(e.profile_url) || { url: e.profile_url, name: e.profile_name, title: e.profile_title, views: 0, ms: 0 };
+    const prev = profileMap.get(e.profile_url) || { url: e.profile_url, name: e.profile_name, title: e.profile_title, views: 0, ms: 0, firstSeen: e.ts, lastSeen: e.ts };
     prev.views += 1;
     try { prev.ms += (e.meta ? JSON.parse(e.meta).dwell_ms || 0 : 0); } catch {}
     prev.name = e.profile_name || prev.name;
     prev.title = e.profile_title || prev.title;
+    if (e.ts < prev.firstSeen) prev.firstSeen = e.ts;
+    if (e.ts > prev.lastSeen) prev.lastSeen = e.ts;
     profileMap.set(e.profile_url, prev);
   }
   return {
-    profiles: [...profileMap.values()].sort((a, b) => b.ms - a.ms),
+    profiles: [...profileMap.values()].sort((a, b) => b.lastSeen - a.lastSeen),
     downloads: events.filter((e) => e.type === "cv_downloaded").length,
     contacts: events.filter((e) => e.type === "contact_viewed").length,
     searches: events.filter((e) => e.type === "search_ran").length,

@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import Shell from "@/components/Shell";
-import { fmtDuration, todayISO } from "@/lib/format";
+import { fmtDuration, fmtTime, todayISO } from "@/lib/format";
 
-type Profile = { url: string; name: string | null; title: string | null; views: number; ms: number };
+type Profile = { url: string; name: string | null; title: string | null; views: number; ms: number; firstSeen: number; lastSeen: number };
 type Data = { profiles: Profile[]; connectionsSent: number; messagesSent: number; searches: number };
 
 export default function LinkedInPage() {
@@ -27,13 +27,15 @@ export default function LinkedInPage() {
           <div className="card">
             <h2>Profiles viewed ({data.profiles.length})</h2>
             <table className="tbl">
-              <thead><tr><th>Name</th><th>Title</th><th style={{ textAlign: "right" }}>Views</th><th style={{ textAlign: "right" }}>Time</th></tr></thead>
+              <thead><tr><th>Name</th><th>Title</th><th style={{ textAlign: "right" }}>First</th><th style={{ textAlign: "right" }}>Last</th><th style={{ textAlign: "right" }}>Views</th><th style={{ textAlign: "right" }}>Time</th></tr></thead>
               <tbody>
-                {data.profiles.length === 0 && (<tr><td colSpan={4} className="empty">No profiles viewed yet</td></tr>)}
+                {data.profiles.length === 0 && (<tr><td colSpan={6} className="empty">No profiles viewed yet</td></tr>)}
                 {data.profiles.map((p) => (
                   <tr key={p.url}>
                     <td><a href={p.url} target="_blank" rel="noreferrer">{p.name || "(unknown)"}</a></td>
                     <td>{p.title || "—"}</td>
+                    <td className="num">{fmtTime(p.firstSeen)}</td>
+                    <td className="num">{fmtTime(p.lastSeen)}</td>
                     <td className="num">{p.views}</td>
                     <td className="num">{fmtDuration(p.ms)}</td>
                   </tr>
