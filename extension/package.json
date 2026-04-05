@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node build.js",
     "build:chrome": "node build.js && echo 'load extension/dist/chrome in chrome://extensions'",
-    "build:firefox": "node build.js && echo 'load extension/dist/firefox/manifest.json in about:debugging'"
+    "build:firefox": "node build.js && echo 'load extension/dist/firefox/manifest.json in about:debugging'",
+    "pack": "node package.js"
   }
 }

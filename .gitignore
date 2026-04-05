@@ -12,3 +12,4 @@ cloud/.next/
 *.db-*
 cloud/tsconfig.tsbuildinfo
 extension/dist/
+extension/releases/

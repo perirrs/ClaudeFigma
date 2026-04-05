@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "npm --workspace cloud run dev",
     "build": "npm --workspace cloud run build",
-    "start": "npm --workspace cloud run start"
+    "start": "npm --workspace cloud run start",
+    "ext:build": "node extension/build.js",
+    "ext:pack": "node extension/package.js"
   }
 }
