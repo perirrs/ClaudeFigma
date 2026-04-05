@@ -109,6 +109,16 @@
   shadow.appendChild(wrap);
   document.body.appendChild(host);
 
+  // LinkedIn's SPA sometimes rips out parts of the body tree on navigation,
+  // taking our overlay host with it. Watch for that and re-attach.
+  const reattachObserver = new MutationObserver(() => {
+    if (!document.body) return;
+    if (!document.body.contains(host)) {
+      try { document.body.appendChild(host); } catch {}
+    }
+  });
+  reattachObserver.observe(document.body, { childList: true, subtree: false });
+
   function extensionAlive() {
     try { return !!(chrome && chrome.runtime && chrome.runtime.id); } catch { return false; }
   }
