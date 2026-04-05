@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Productivity Analyser</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div>
+          <div class="brand-name">Productivity</div>
+          <div class="brand-sub">Analyser</div>
+        </div>
+      </div>
+
+      <nav>
+        <a class="nav-item active" data-view="overview">Overview</a>
+        <a class="nav-item" data-view="linkedin">LinkedIn</a>
+        <a class="nav-item" data-view="naukri">Naukri</a>
+        <a class="nav-item" data-view="apps">Apps &amp; Domains</a>
+        <a class="nav-item" data-view="timeline">Timeline</a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="status-row">
+          <span class="dot ok" id="tracker-dot"></span>
+          <span id="tracker-label">Tracking</span>
+          <button id="toggle-btn">Pause</button>
+        </div>
+        <label class="date-row">
+          <span>Date</span>
+          <input type="date" id="date-input" />
+        </label>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <h1 id="view-title">Overview</h1>
+        <div class="topbar-meta" id="topbar-meta"></div>
+      </header>
+
+      <section class="view" id="view-overview">
+        <div class="kpi-grid">
+          <div class="kpi"><div class="kpi-label">Active time</div><div class="kpi-value" id="kpi-active">—</div></div>
+          <div class="kpi"><div class="kpi-label">Idle time</div><div class="kpi-value" id="kpi-idle">—</div></div>
+          <div class="kpi kpi-green"><div class="kpi-label">LinkedIn</div><div class="kpi-value" id="kpi-linkedin">—</div></div>
+          <div class="kpi kpi-blue"><div class="kpi-label">Naukri</div><div class="kpi-value" id="kpi-naukri">—</div></div>
+        </div>
+
+        <div class="kpi-grid kpi-grid-sm">
+          <div class="kpi-sm"><div class="kpi-label">Connections sent</div><div class="kpi-value-sm" id="kpi-connections">—</div></div>
+          <div class="kpi-sm"><div class="kpi-label">Messages sent</div><div class="kpi-value-sm" id="kpi-messages">—</div></div>
+          <div class="kpi-sm"><div class="kpi-label">LinkedIn profiles</div><div class="kpi-value-sm" id="kpi-li-profiles">—</div></div>
+          <div class="kpi-sm"><div class="kpi-label">Naukri profiles</div><div class="kpi-value-sm" id="kpi-nk-profiles">—</div></div>
+          <div class="kpi-sm"><div class="kpi-label">CV downloads</div><div class="kpi-value-sm" id="kpi-cv">—</div></div>
+        </div>
+
+        <div class="split">
+          <div class="card">
+            <h2>Time split</h2>
+            <div id="split-bars"></div>
+          </div>
+          <div class="card">
+            <h2>Top domains</h2>
+            <div id="top-domains" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view hidden" id="view-linkedin">
+        <div class="card">
+          <h2>Profiles viewed</h2>
+          <table class="tbl">
+            <thead><tr><th>Name</th><th>Title</th><th>Views</th><th>Time</th></tr></thead>
+            <tbody id="li-profiles-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="view hidden" id="view-naukri">
+        <div class="card">
+          <h2>Profiles viewed</h2>
+          <table class="tbl">
+            <thead><tr><th>Name</th><th>Title</th><th>Views</th><th>Time</th></tr></thead>
+            <tbody id="nk-profiles-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="view hidden" id="view-apps">
+        <div class="split">
+          <div class="card">
+            <h2>Applications</h2>
+            <div id="app-list" class="list"></div>
+          </div>
+          <div class="card">
+            <h2>Domains</h2>
+            <div id="domain-list" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view hidden" id="view-timeline">
+        <div class="card">
+          <h2>Hourly breakdown</h2>
+          <div id="timeline-chart"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="dashboard.js"></script>
+  </body>
+</html>

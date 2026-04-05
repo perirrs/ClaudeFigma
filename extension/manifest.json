@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Productivity Analyser - Browser Bridge",
+  "version": "0.1.0",
+  "description": "Tracks per-URL time and recruiter activity on LinkedIn & Naukri, sending it to the Productivity Analyser desktop app.",
+  "permissions": ["tabs", "activeTab", "storage", "idle"],
+  "host_permissions": [
+    "https://www.linkedin.com/*",
+    "https://*.linkedin.com/*",
+    "https://www.naukri.com/*",
+    "https://*.naukri.com/*",
+    "http://127.0.0.1:47624/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/*", "https://*.linkedin.com/*"],
+      "js": ["content-linkedin.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.naukri.com/*", "https://*.naukri.com/*"],
+      "js": ["content-naukri.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Productivity Analyser",
+    "default_popup": "popup.html"
+  },
+  "icons": {}
+}

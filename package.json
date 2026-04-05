@@ -1,29 +1,48 @@
 {
-  "name": "mergen-corporate",
+  "name": "productivity-analyser",
   "version": "0.1.0",
-  "private": true,
+  "description": "Desktop productivity analyser for recruitment & staffing teams. Tracks time on LinkedIn, Naukri, idle time, connections and messages.",
+  "main": "electron/main.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "preview": "next build && npx serve out -l 3000"
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
   },
+  "keywords": [
+    "productivity",
+    "recruitment",
+    "time-tracking",
+    "linkedin",
+    "naukri",
+    "electron"
+  ],
+  "author": "",
+  "license": "MIT",
   "dependencies": {
-    "next": "^14.2.0",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
-    "framer-motion": "^11.0.0",
-    "clsx": "^2.1.0",
-    "@heroicons/react": "^2.1.0"
+    "active-win": "^8.2.0",
+    "better-sqlite3": "^11.3.0",
+    "chart.js": "^4.4.4"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
-    "@types/node": "^20.12.0",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
-    "tailwindcss": "^3.4.0",
-    "postcss": "^8.4.0",
-    "autoprefixer": "^10.4.0"
+    "electron": "^32.1.2",
+    "electron-builder": "^25.0.5"
+  },
+  "build": {
+    "appId": "com.productivityanalyser.app",
+    "productName": "Productivity Analyser",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "mac": { "category": "public.app-category.productivity" },
+    "win": { "target": "nsis" },
+    "linux": { "target": "AppImage" }
   }
 }
