@@ -25,6 +25,18 @@
 
   function text(el) { return el ? (el.textContent || "").trim().replace(/\s+/g, " ") : null; }
 
+  // Titles that look like UI chrome rather than a real job headline; if the
+  // DOM selectors accidentally grab one of these we ignore it.
+  const CHROME_RE = /^(message|connect|follow|more|pending|accept|ignore|withdraw|following|remove connection|see more|show more|view profile|open to)$/i;
+
+  function looksLikeRealTitle(s) {
+    if (!s) return false;
+    const t = s.trim();
+    if (t.length < 3 || t.length > 220) return false;
+    if (CHROME_RE.test(t)) return false;
+    return true;
+  }
+
   // ---- Profile dwell tracking ----
   let currentProfile = null;
   let profileStart = null;
@@ -50,10 +62,9 @@
       text(document.querySelector("main h1 + div")) ||
       text(document.querySelector('.pv-text-details__left-panel .text-body-medium')) ||
       text(document.querySelector('.ph5 .text-body-medium'));
+    if (!looksLikeRealTitle(title)) title = null;
 
-    // Strategy 2: fall back to document.title / og:title. LinkedIn sets
-    // document.title to things like "Satya Nadella - Chairman & CEO at
-    // Microsoft | LinkedIn" which reliably gives us both fields.
+    // Strategy 2: document.title / og:title ("Name - Title at Company | LinkedIn").
     if (!name || !title) {
       const og = document.querySelector('meta[property="og:title"]');
       const rawTitle = (og && og.getAttribute("content")) || document.title || "";
@@ -62,33 +73,33 @@
         .replace(/\(\d+\)\s*/, "")
         .trim();
       if (cleaned && !/^linkedin/i.test(cleaned)) {
-        // Common patterns:
-        //  "Name - Title at Company"
-        //  "Name | Title"
-        //  "Name – Title"
         const m = cleaned.match(/^(.+?)\s+[-–|]\s+(.+)$/);
         if (m) {
           if (!name) name = m[1].trim();
-          if (!title) title = m[2].trim();
+          if (!title && looksLikeRealTitle(m[2])) title = m[2].trim();
         } else if (!name) {
           name = cleaned;
         }
       }
     }
 
-    // Strategy 3: the meta description. LinkedIn profile pages set this to
-    // "<Headline> · Experience: <Company> · Education: ... · Location: ...".
-    // The first segment is almost always the job headline we want.
+    // Strategy 3: meta description. LinkedIn profile pages usually set this
+    // to "<Headline> · Experience: ... · Location: ..." — first segment is
+    // the job headline. If that's missing, fall back to meta description's
+    // "Location: X · 500+ connections · View …'s profile" style and try to
+    // pull a title from within.
     if (!title) {
       const md = document.querySelector('meta[name="description"]');
-      const raw = (md && md.getAttribute("content")) || "";
-      // Strip any lead-in like "View Name's profile on LinkedIn, ..."
-      const trimmed = raw.replace(/^view .+?'s profile on linkedin[^.]*\.\s*/i, "").trim();
-      const first = trimmed.split(/\s+·\s+|\s+\|\s+/)[0];
-      if (first && first.length > 2 && first.length < 200 && !/^linkedin/i.test(first)) {
-        title = first.trim();
+      const raw = ((md && md.getAttribute("content")) || "").trim();
+      if (raw) {
+        const noLead = raw.replace(/^view .+?'s profile on linkedin[^.·|]*[.·|]\s*/i, "").trim();
+        const first = noLead.split(/\s+·\s+|\s+\|\s+/)[0].trim();
+        if (looksLikeRealTitle(first) && !/^location:|^experience:|^education:|\bconnections\b/i.test(first)) {
+          title = first;
+        }
       }
     }
+
     return { name, title };
   }
 
@@ -102,8 +113,6 @@
   function flushProfile() {
     if (extractTimer) { clearInterval(extractTimer); extractTimer = null; }
     if (!currentProfile || profileStart == null) return;
-    // One more attempt to grab any fields that finally rendered.
-    updateCurrentProfileMeta();
     const dwell = Date.now() - profileStart;
     if (dwell < 1500) { currentProfile = null; profileStart = null; return; }
     send("profile_viewed", {
@@ -123,8 +132,10 @@
     flushProfile();
     currentProfile = { url, name: null, title: null };
     profileStart = Date.now();
-    // LinkedIn's SPA renders the header lazily. Keep retrying extraction
-    // until we get both fields or we time out after 12s.
+    // Extract immediately, then retry every 500ms for up to 12s while the
+    // SPA progressively renders the header. Don't re-extract at flush time
+    // since by then the user may have navigated away and the DOM has moved.
+    updateCurrentProfileMeta();
     let attempts = 0;
     extractTimer = setInterval(() => {
       attempts += 1;
@@ -148,9 +159,31 @@
   maybeStartProfile();
 
   // ---- Connection & message detection ----
-  // We listen globally for clicks and inspect the clicked element's ancestry
-  // to classify it as a connection-send or a message-send. LinkedIn changes
-  // DOM classes frequently, so we rely on text/aria-labels and dialog context.
+  //
+  // The DOM around LinkedIn's invite flow is volatile. Rather than trying
+  // to recognise every modal variant, we "arm" the detector whenever the
+  // user clicks a Connect / Invite button. Any Send click within 60s of
+  // an arming event counts as a connection_sent. This matches human flow
+  // exactly: click Connect → optionally add a note → click Send.
+
+  let armedAt = 0;
+  let armedProfileUrl = null;
+  let armedProfileName = null;
+  let armedProfileTitle = null;
+  const ARM_WINDOW_MS = 60_000;
+
+  function arm() {
+    armedAt = Date.now();
+    armedProfileUrl = (currentProfile && currentProfile.url) || profileUrlFromLocation();
+    armedProfileName = currentProfile && currentProfile.name;
+    armedProfileTitle = currentProfile && currentProfile.title;
+  }
+  function disarm() {
+    armedAt = 0; armedProfileUrl = null; armedProfileName = null; armedProfileTitle = null;
+  }
+  function isArmed() {
+    return armedAt > 0 && (Date.now() - armedAt) < ARM_WINDOW_MS;
+  }
 
   function labelOf(el) {
     if (!el) return "";
@@ -158,20 +191,17 @@
       .trim().toLowerCase().replace(/\s+/g, " ");
   }
 
-  function isSendLabel(label) {
+  function isConnectLabel(label) {
     if (!label) return false;
-    // Matches: "send", "send now", "send invitation", "send without a note",
-    // "send invite", "send message", "send message to …"
-    return /^send\b/.test(label) || label === "send";
+    // "Connect", "Invite Alice to connect", "Connect with Alice"
+    return /^connect\b/.test(label) || /invite .* to connect/.test(label) || /^connect with /.test(label);
   }
 
-  function dialogContext(el) {
-    // Walk up to the nearest dialog/modal container and inspect its text.
-    const dlg = el.closest('[role="dialog"], .artdeco-modal, .msg-overlay-conversation-bubble');
-    if (!dlg) return null;
-    const blob = ((dlg.getAttribute("aria-label") || "") + " " + (dlg.textContent || ""))
-      .toLowerCase().slice(0, 2000);
-    return { el: dlg, blob };
+  function isSendLabel(label) {
+    if (!label) return false;
+    // "Send", "Send now", "Send invitation", "Send without a note",
+    // "Send invite", "Done", "Send message", "Send message to …"
+    return /^send\b/.test(label) || label === "done";
   }
 
   function isMessagingContainer(el) {
@@ -187,14 +217,16 @@
     if (!target) return;
     const label = labelOf(target);
 
-    // "Connect" button clicked (pre-invite).
-    if (/^connect$/.test(label) || /^invite .* to connect$/.test(label) || /^follow$/.test(label) === false && /invite .* to connect/.test(label)) {
+    // Arm on Connect click.
+    if (isConnectLabel(label)) {
+      arm();
       send("connect_clicked", { profile_url: profileUrlFromLocation() });
+      return;
     }
 
     if (!isSendLabel(label)) return;
 
-    // Case 1: click happened inside the messaging composer → message_sent.
+    // Messaging Send click - always classify as message_sent.
     if (isMessagingContainer(target)) {
       send("message_sent", {
         profile_url: profileUrlFromLocation(),
@@ -204,17 +236,23 @@
       return;
     }
 
-    // Case 2: click happened inside a dialog. Inspect the dialog text to
-    // decide between an invitation send and a message send.
-    const ctx = dialogContext(target);
-    if (ctx) {
-      if (/invit|connect|add a note|personalize/.test(ctx.blob)) {
-        send("connection_sent", {
-          profile_url: profileUrlFromLocation(),
-          profile_name: currentProfile && currentProfile.name,
-          profile_title: currentProfile && currentProfile.title,
-        });
-      } else if (/message|write a message|new message/.test(ctx.blob)) {
+    // Armed Send - this is the follow-up click after Connect. Count as
+    // connection_sent using the profile info captured at arming time.
+    if (isArmed()) {
+      send("connection_sent", {
+        profile_url: armedProfileUrl || profileUrlFromLocation(),
+        profile_name: armedProfileName || (currentProfile && currentProfile.name),
+        profile_title: armedProfileTitle || (currentProfile && currentProfile.title),
+      });
+      disarm();
+      return;
+    }
+
+    // Fallback: Send click inside a dialog that mentions messaging.
+    const dlg = target.closest('[role="dialog"], .artdeco-modal');
+    if (dlg) {
+      const blob = ((dlg.getAttribute("aria-label") || "") + " " + (dlg.textContent || "")).toLowerCase().slice(0, 2000);
+      if (/message|new message|write a message/.test(blob)) {
         send("message_sent", {
           profile_url: profileUrlFromLocation(),
           profile_name: currentProfile && currentProfile.name,
