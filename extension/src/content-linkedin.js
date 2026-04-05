@@ -75,6 +75,20 @@
         }
       }
     }
+
+    // Strategy 3: the meta description. LinkedIn profile pages set this to
+    // "<Headline> · Experience: <Company> · Education: ... · Location: ...".
+    // The first segment is almost always the job headline we want.
+    if (!title) {
+      const md = document.querySelector('meta[name="description"]');
+      const raw = (md && md.getAttribute("content")) || "";
+      // Strip any lead-in like "View Name's profile on LinkedIn, ..."
+      const trimmed = raw.replace(/^view .+?'s profile on linkedin[^.]*\.\s*/i, "").trim();
+      const first = trimmed.split(/\s+·\s+|\s+\|\s+/)[0];
+      if (first && first.length > 2 && first.length < 200 && !/^linkedin/i.test(first)) {
+        title = first.trim();
+      }
+    }
     return { name, title };
   }
 
