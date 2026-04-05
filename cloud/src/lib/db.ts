@@ -61,10 +61,23 @@ CREATE INDEX IF NOT EXISTS idx_events_source_type ON events(source, type);
 `;
 
 function seedAdminIfEmpty(d: Database.Database) {
-  const row = d.prepare("SELECT COUNT(*) as c FROM users").get() as { c: number };
-  if (row.c > 0) return;
+  const envKey = process.env.PA_ADMIN_KEY || null;
+  const existing = d.prepare("SELECT id, api_key FROM users WHERE role = 'admin' LIMIT 1").get() as
+    | { id: string; api_key: string }
+    | undefined;
+
+  if (existing) {
+    // If PA_ADMIN_KEY is set on this boot and differs from the stored admin
+    // key, update the admin row so the env var is always authoritative.
+    if (envKey && envKey !== existing.api_key) {
+      d.prepare("UPDATE users SET api_key = ? WHERE id = ?").run(envKey, existing.id);
+      console.log(`\n==> admin API key updated from PA_ADMIN_KEY\n`);
+    }
+    return;
+  }
+
   const id = "admin";
-  const key = process.env.PA_ADMIN_KEY || randomKey();
+  const key = envKey || randomKey();
   d.prepare(
     `INSERT INTO users (id, name, email, team, api_key, role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`
   ).run(id, "Admin", "", "ops", key, "admin", Date.now());
