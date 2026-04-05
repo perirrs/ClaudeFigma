@@ -26,10 +26,14 @@ function ensureDir(p) { fs.mkdirSync(p, { recursive: true }); }
 function zipDir(srcDir, outFile) {
   if (fs.existsSync(outFile)) fs.unlinkSync(outFile);
   if (isWin) {
-    // PowerShell's Compress-Archive archives the contents of srcDir when
-    // given srcDir\*. Escaping: wrap paths in single quotes.
-    const ps = `Compress-Archive -Path '${srcDir}\\*' -DestinationPath '${outFile}' -Force`;
+    // PowerShell's Compress-Archive only writes .zip; for .xpi we compress
+    // to a sibling .zip then rename.
+    const ext = path.extname(outFile).toLowerCase();
+    const tmp = ext === ".zip" ? outFile : outFile.replace(/\.[^.]+$/, "") + ".zip";
+    if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    const ps = `Compress-Archive -Path '${srcDir}\\*' -DestinationPath '${tmp}' -Force`;
     run(`powershell -NoProfile -NonInteractive -Command "${ps}"`);
+    if (tmp !== outFile) fs.renameSync(tmp, outFile);
   } else {
     // `zip -r -j` would flatten; we want the archive root = dist contents.
     // Run from inside srcDir, archive everything in it.
