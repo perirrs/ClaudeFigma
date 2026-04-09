@@ -1,4 +1,5 @@
 const SYNC_SETTINGS_KEYS = ["recruiterName", "recruiterEmail", "syncEnabled", "syncUrl", "syncToken", "showOverlay"];
+const DEFAULT_SYNC_URL = "https://mats.base44.app/api/functions/syncActivity";
 
 async function load() {
   // Enterprise managed storage (read-only, set by IT admin via policy)
@@ -9,7 +10,7 @@ async function load() {
   document.getElementById("recruiterName").value = data.recruiterName || "";
   document.getElementById("recruiterEmail").value = data.recruiterEmail || "";
   document.getElementById("syncEnabled").checked = managed.syncEnabled ?? !!data.syncEnabled;
-  document.getElementById("syncUrl").value = managed.syncUrl || data.syncUrl || "";
+  document.getElementById("syncUrl").value = managed.syncUrl || data.syncUrl || DEFAULT_SYNC_URL;
   document.getElementById("syncToken").value = managed.syncToken || data.syncToken || "";
   document.getElementById("showOverlay").checked = (managed.showOverlay ?? data.showOverlay) !== false;
 

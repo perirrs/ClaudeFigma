@@ -287,6 +287,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 });
 
 // ---- Team sync ----
+const DEFAULT_SYNC_URL = "https://mats.base44.app/api/functions/syncActivity";
+
 async function getSyncConfig() {
   // Managed storage (enterprise policy) takes priority, then user settings.
   let managed = {};
@@ -294,7 +296,7 @@ async function getSyncConfig() {
   const user = await chrome.storage.sync.get(["syncEnabled", "syncUrl", "syncToken", "recruiterName", "recruiterEmail"]);
   return {
     syncEnabled: managed.syncEnabled ?? user.syncEnabled,
-    syncUrl: managed.syncUrl || user.syncUrl,
+    syncUrl: managed.syncUrl || user.syncUrl || DEFAULT_SYNC_URL,
     syncToken: managed.syncToken || user.syncToken,
     recruiterName: user.recruiterName,
     recruiterEmail: user.recruiterEmail,
