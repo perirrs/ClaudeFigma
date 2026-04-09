@@ -352,7 +352,10 @@ async function syncToServer() {
 
   try {
     const headers = { "Content-Type": "application/json" };
-    if (cfg.syncToken) headers["Authorization"] = `Bearer ${cfg.syncToken}`;
+    if (cfg.syncToken) {
+      headers["X-API-Key"] = cfg.syncToken;
+      headers["Authorization"] = `Bearer ${cfg.syncToken}`;
+    }
     const res = await fetch(cfg.syncUrl, { method: "POST", headers, body: JSON.stringify(payload) });
     if (res.ok) {
       await chrome.storage.local.set({ lastSyncTime: Date.now(), lastSyncError: null });

@@ -69,7 +69,7 @@ document.getElementById("test-sync").addEventListener("click", async () => {
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...(token ? { "Authorization": `Bearer ${token}` } : {}) },
+      headers: { "Content-Type": "application/json", ...(token ? { "X-API-Key": token, "Authorization": `Bearer ${token}` } : {}) },
       body: JSON.stringify({ test: true, recruiterName: name }),
     });
     if (res.ok) {
