@@ -88,7 +88,9 @@ document.getElementById("test-sync").addEventListener("click", async () => {
       document.getElementById("sync-status").textContent = "Connection OK!";
       document.getElementById("sync-status").style.color = "#4ade80";
     } else {
-      document.getElementById("sync-status").textContent = `Server returned ${res.status}`;
+      let detail = "";
+      try { const body = await res.text(); detail = " — " + body.slice(0, 200); } catch {}
+      document.getElementById("sync-status").textContent = `Server returned ${res.status}${detail}`;
       document.getElementById("sync-status").style.color = "#f87171";
     }
   } catch (e) {
