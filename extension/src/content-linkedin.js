@@ -300,15 +300,52 @@
     if (!label) return false;
     // "Send", "Send now", "Send invitation", "Send without a note",
     // "Send invite", "Done", "Send message", "Send message to …"
-    return /^send\b/.test(label) || label === "done";
+    return /^send\b/.test(label) || label === "done" || /\bsend\b/.test(label);
   }
 
+  // Broader set of selectors for LinkedIn's messaging containers.
+  // LinkedIn changes class names frequently so we cast a wide net.
+  const MSG_CONTAINER_SELECTORS = [
+    '.msg-form',
+    '.msg-form__contenteditable',
+    '.msg-overlay-conversation-bubble',
+    '.msg-convo-wrapper',
+    '.msg-thread',
+    '.msg-s-message-list-container',
+    '.msg-s-event-listitem',
+    '.message-form-container',
+    '[data-test-messaging-message-composer]',
+    // Newer LinkedIn messaging selectors
+    '.msg-overlay-bubble-header',
+    '.msg-conversations-container',
+    '.msg-overlay-list-bubble',
+    '[class*="msg-form"]',
+    '[class*="msg-overlay"]',
+    '[class*="messaging-container"]',
+    '[class*="message-editor"]',
+  ].join(', ');
+
   function isMessagingContainer(el) {
-    return !!el.closest(
-      '.msg-form, .msg-form__contenteditable, .msg-overlay-conversation-bubble, ' +
-      '.msg-convo-wrapper, [data-test-messaging-message-composer], ' +
-      '.msg-thread, .message-form-container, .msg-s-message-list-container'
-    );
+    if (!el) return false;
+    // Check the element itself and ancestors.
+    return !!el.closest(MSG_CONTAINER_SELECTORS);
+  }
+
+  // Check if an element is inside or part of LinkedIn's messaging UI
+  // by looking at the broader DOM context.
+  function isInMessagingContext(el) {
+    if (!el) return false;
+    if (isMessagingContainer(el)) return true;
+    // Walk up to 10 parents looking for messaging clues.
+    let node = el;
+    for (let i = 0; i < 10 && node; i++) {
+      const cls = node.className || "";
+      const id = node.id || "";
+      if (typeof cls === "string" && (/\bmsg[-_]/.test(cls) || /messaging/i.test(cls))) return true;
+      if (/\bmsg[-_]/.test(id) || /messaging/i.test(id)) return true;
+      node = node.parentElement;
+    }
+    return false;
   }
 
   // Watch for success toasts/banners that confirm a connection was sent.
@@ -335,26 +372,51 @@
     }
   }
 
-  document.addEventListener("click", (e) => {
-    const target = e.target.closest("button, a, [role='button'], [role='link']");
-    if (!target) return;
-    const label = labelOf(target);
+  // Helper: get label from a button, checking the button itself, its
+  // aria-label, title, and direct text. For icon-only buttons (SVG send
+  // icon) we check aria-label on the button AND the closest form submit.
+  function buttonLabel(el) {
+    if (!el) return "";
+    // Try the element itself.
+    let label = (el.getAttribute("aria-label") || "").trim().toLowerCase();
+    if (label) return label;
+    label = (el.getAttribute("title") || "").trim().toLowerCase();
+    if (label) return label;
+    // For icon-only buttons, textContent is often empty or just whitespace.
+    const txt = (el.textContent || "").trim().toLowerCase().replace(/\s+/g, " ");
+    if (txt && txt.length < 30) return txt;
+    // Check if it's a submit button inside a form.
+    if (el.type === "submit") return "send";
+    return txt;
+  }
 
-    // Arm on Connect click.
-    if (isConnectLabel(label)) {
-      arm();
-      send("connect_clicked", { profile_url: profileUrlFromLocation() });
-      // Start polling for success toast in case we miss the Send click.
-      setTimeout(checkConnectionToast, 2000);
-      setTimeout(checkConnectionToast, 4000);
-      setTimeout(checkConnectionToast, 6000);
-      return;
+  // Detect if a clicked element is LinkedIn's messaging send button.
+  // LinkedIn's send button is often an icon-only button with:
+  //   aria-label="Send" or class containing "msg-form__send-button"
+  //   or a button[type="submit"] inside a .msg-form
+  function isMessagingSendButton(el) {
+    if (!el) return false;
+    const btn = el.closest("button, [role='button']");
+    if (!btn) return false;
+    // Check class name directly.
+    const cls = (btn.className || "").toString().toLowerCase();
+    if (/msg-form__send|send-button|msg.*send/.test(cls)) return true;
+    // Check aria-label.
+    const aria = (btn.getAttribute("aria-label") || "").toLowerCase();
+    if (/^send/.test(aria)) {
+      // Only count as message send if in messaging context.
+      if (isInMessagingContext(btn)) return true;
     }
+    // Submit button inside a msg-form.
+    if (btn.type === "submit" && isInMessagingContext(btn)) return true;
+    return false;
+  }
 
-    if (!isSendLabel(label)) return;
-
-    // Messaging Send click - always classify as message_sent.
-    if (isMessagingContainer(target)) {
+  document.addEventListener("click", (e) => {
+    // Check for messaging send button FIRST (even before getting a
+    // labeled target), because LinkedIn's send button may be an SVG
+    // that doesn't match "button, a, [role='button']".
+    if (isMessagingSendButton(e.target)) {
       send("message_sent", {
         profile_url: profileUrlFromLocation(),
         profile_name: currentProfile && currentProfile.name,
@@ -363,8 +425,33 @@
       return;
     }
 
-    // Armed Send - this is the follow-up click after Connect. Count as
-    // connection_sent using the profile info captured at arming time.
+    const target = e.target.closest("button, a, [role='button'], [role='link']");
+    if (!target) return;
+    const label = buttonLabel(target);
+
+    // Arm on Connect click.
+    if (isConnectLabel(label)) {
+      arm();
+      send("connect_clicked", { profile_url: profileUrlFromLocation() });
+      setTimeout(checkConnectionToast, 2000);
+      setTimeout(checkConnectionToast, 4000);
+      setTimeout(checkConnectionToast, 6000);
+      return;
+    }
+
+    if (!isSendLabel(label)) return;
+
+    // Messaging Send click — check broadly for messaging context.
+    if (isInMessagingContext(target)) {
+      send("message_sent", {
+        profile_url: profileUrlFromLocation(),
+        profile_name: currentProfile && currentProfile.name,
+        profile_title: currentProfile && currentProfile.title,
+      });
+      return;
+    }
+
+    // Armed Send - follow-up click after Connect. Count as connection_sent.
     if (isArmed()) {
       send("connection_sent", {
         profile_url: armedProfileUrl || profileUrlFromLocation(),
@@ -375,7 +462,7 @@
       return;
     }
 
-    // Fallback: Send click inside a dialog that mentions messaging.
+    // Fallback: Send click inside a dialog.
     const dlg = target.closest('[role="dialog"], .artdeco-modal');
     if (dlg) {
       const blob = ((dlg.getAttribute("aria-label") || "") + " " + (dlg.textContent || "")).toLowerCase().slice(0, 2000);
@@ -386,7 +473,6 @@
           profile_title: currentProfile && currentProfile.title,
         });
       } else if (/connect|invitation/.test(blob)) {
-        // Dialog about connection invitation — count it.
         send("connection_sent", {
           profile_url: (currentProfile && currentProfile.url) || profileUrlFromLocation(),
           profile_name: currentProfile && currentProfile.name,
@@ -399,14 +485,29 @@
   // Messaging: Enter-to-send in any contenteditable composer.
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" || e.shiftKey) return;
-    const editor = e.target.closest('.msg-form__contenteditable, [contenteditable="true"]');
+    // Broad check: any contenteditable inside a messaging context.
+    const editor = e.target.closest('[contenteditable="true"], .msg-form__contenteditable, [class*="msg-form__contenteditable"]');
     if (!editor) return;
-    if (!isMessagingContainer(editor)) return;
+    if (!isInMessagingContext(editor)) return;
     send("message_sent", {
       profile_url: profileUrlFromLocation(),
       profile_name: currentProfile && currentProfile.name,
       profile_title: currentProfile && currentProfile.title,
     });
+  }, true);
+
+  // Also detect messages sent via LinkedIn's messaging page (/messaging/).
+  // On that page the URL doesn't have /in/, so profileUrlFromLocation()
+  // returns null. We can still count the message send action.
+  // Watch for form submissions inside messaging.
+  document.addEventListener("submit", (e) => {
+    if (isInMessagingContext(e.target)) {
+      send("message_sent", {
+        profile_url: profileUrlFromLocation(),
+        profile_name: currentProfile && currentProfile.name,
+        profile_title: currentProfile && currentProfile.title,
+      });
+    }
   }, true);
 
   // ---- Search tracking ----
