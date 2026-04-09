@@ -56,7 +56,39 @@ function render(day) {
     }).join("");
   }
 
-  // LinkedIn profiles
+  // LinkedIn connections sent
+  const connEvents = (day.events || []).filter(e => e.source === "linkedin" && e.type === "connection_sent");
+  const connEl = document.getElementById("li-connections");
+  if (connEvents.length === 0) {
+    connEl.innerHTML = '<div class="empty">No connections yet</div>';
+  } else {
+    connEl.innerHTML = connEvents.map(e => {
+      const time = new Date(e.ts || e._ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return `<div class="profile-row">
+        <div class="profile-name">${esc(e.profile_name || "Unknown")}</div>
+        <div class="profile-title">${esc(e.profile_title || "—")}</div>
+        <div class="profile-meta">${time} · <a href="${esc(e.profile_url || "")}" target="_blank" style="color:var(--green);text-decoration:none;font-size:10px;">open profile</a></div>
+      </div>`;
+    }).join("");
+  }
+
+  // Naukri CV downloads
+  const dlEvents = (day.events || []).filter(e => e.source === "naukri" && e.type === "cv_downloaded");
+  const dlEl = document.getElementById("nk-downloads");
+  if (dlEvents.length === 0) {
+    dlEl.innerHTML = '<div class="empty">No downloads yet</div>';
+  } else {
+    dlEl.innerHTML = dlEvents.map(e => {
+      const time = new Date(e.ts || e._ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return `<div class="profile-row">
+        <div class="profile-name">${esc(e.profile_name || "Unknown")}</div>
+        <div class="profile-title">${esc(e.profile_title || "—")}</div>
+        <div class="profile-meta">${time} · <a href="${esc(e.profile_url || "")}" target="_blank" style="color:var(--blue);text-decoration:none;font-size:10px;">open profile</a></div>
+      </div>`;
+    }).join("");
+  }
+
+  // LinkedIn profiles viewed
   const liEvents = (day.events || []).filter(e => e.source === "linkedin" && e.type === "profile_viewed");
   const liMap = new Map();
   for (const e of liEvents) {
@@ -70,7 +102,10 @@ function render(day) {
       if (e.profile_title) prev.title = e.profile_title;
     }
   }
-  const liList = [...liMap.values()].sort((a, b) => b.ts - a.ts);
+  const GENERIC_RE = /^(search|feed|home|jobs|messaging|notifications|my network|post|groups?|events?|pages?|companies|people|invite|settings|premium|linkedin|unknown)$/i;
+  const liList = [...liMap.values()]
+    .filter(p => p.name && !GENERIC_RE.test(p.name.trim()))
+    .sort((a, b) => b.ts - a.ts);
   const liEl = document.getElementById("li-profiles");
   if (liList.length === 0) {
     liEl.innerHTML = '<div class="empty">No profiles yet</div>';

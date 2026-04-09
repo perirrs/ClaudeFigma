@@ -29,6 +29,10 @@
   // DOM selectors accidentally grab one of these we ignore it.
   const CHROME_RE = /^(message|connect|follow|more|pending|accept|ignore|withdraw|following|remove connection|see more|show more|view profile|open to)$/i;
 
+  // Generic page headings that are NOT person names. If we see these in
+  // an h1 we skip it and keep looking.
+  const GENERIC_HEADING_RE = /^(search|feed|home|jobs|messaging|notifications|my network|post|groups?|events?|pages?|companies|people|invite|settings|premium|linkedin)$/i;
+
   function looksLikeRealTitle(s) {
     if (!s) return false;
     const t = s.trim();
@@ -50,22 +54,36 @@
 
   function extractProfile() {
     // Strategy 1: primary h1 name selectors. LinkedIn changes class names
-    // frequently so we try many combinations.
+    // frequently so we try many combinations. Order matters — most specific first.
     const h1Selectors = [
       "h1.text-heading-xlarge",
-      "main h1",
-      "section.artdeco-card h1",
       ".pv-top-card--list h1",
       ".ph5 h1",
       ".scaffold-layout__main h1",
       "[data-view-name='profile-card'] h1",
       ".profile-topcard-person-entity h1",
+      "section.artdeco-card h1",
       "h1[tabindex]",
     ];
     let h1 = null;
     for (const sel of h1Selectors) {
-      h1 = document.querySelector(sel);
-      if (h1) break;
+      const candidate = document.querySelector(sel);
+      if (candidate) {
+        const t = text(candidate);
+        // Skip generic page headings that aren't person names.
+        if (t && !GENERIC_HEADING_RE.test(t)) {
+          h1 = candidate;
+          break;
+        }
+      }
+    }
+    // Last resort: any h1 inside main, but NOT nav headings.
+    if (!h1) {
+      const mainH1s = document.querySelectorAll("main h1");
+      for (const c of mainH1s) {
+        const t = text(c);
+        if (t && !GENERIC_HEADING_RE.test(t)) { h1 = c; break; }
+      }
     }
 
     let name = h1 ? text(h1) : null;
@@ -186,9 +204,9 @@
     if (!currentProfile || profileStart == null || profileSent) return;
     const dwell = Date.now() - profileStart;
     if (dwell < 2000) return;
-    // Need at least a name to count it.
     updateCurrentProfileMeta();
-    if (!currentProfile.name && !currentProfile.url) return;
+    // Need a real name (not a generic heading) before sending.
+    if (!currentProfile.name || GENERIC_HEADING_RE.test(currentProfile.name.trim())) return;
     profileSent = true;
     send("profile_viewed", {
       profile_url: currentProfile.url,
