@@ -177,15 +177,14 @@
     if (extractTimer) { clearInterval(extractTimer); extractTimer = null; }
     if (mutationObserver) { mutationObserver.disconnect(); mutationObserver = null; }
     if (!currentProfile || profileStart == null) return;
-    // Only send final event for actual /in/ profile pages with a real name.
     updateCurrentProfileMeta();
     const dwell = Date.now() - profileStart;
-    const name = currentProfile.name;
-    if (dwell >= 1500 && currentProfile.url && name && !GENERIC_HEADING_RE.test(name.trim())) {
+    // Only send for actual /in/ profile pages (url is only set for those).
+    if (dwell >= 1500 && currentProfile.url) {
       send("profile_viewed", {
         profile_url: currentProfile.url,
-        profile_name: name,
-        profile_title: currentProfile.title,
+        profile_name: currentProfile.name || null,
+        profile_title: currentProfile.title || null,
         meta: { dwell_ms: dwell, final: true },
       });
     }
@@ -204,13 +203,13 @@
     const dwell = Date.now() - profileStart;
     if (dwell < 2000) return;
     updateCurrentProfileMeta();
-    // Need a real name (not a generic heading) before sending.
-    if (!currentProfile.name || GENERIC_HEADING_RE.test(currentProfile.name.trim())) return;
+    // Must be on an actual /in/ profile page (url is set by profileUrlFromLocation).
+    if (!currentProfile.url) return;
     profileSent = true;
     send("profile_viewed", {
       profile_url: currentProfile.url,
-      profile_name: currentProfile.name,
-      profile_title: currentProfile.title,
+      profile_name: currentProfile.name || null,
+      profile_title: currentProfile.title || null,
       meta: { dwell_ms: dwell, early: true },
     });
   }

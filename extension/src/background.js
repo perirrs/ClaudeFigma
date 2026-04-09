@@ -83,19 +83,8 @@ function bufferDwell() {
 
 // ---- Event handling ----
 
-const GENERIC_NAME_RE = /^(search|feed|home|jobs|messaging|notifications|my network|post|groups?|events?|pages?|companies|people|invite|settings|premium|linkedin|unknown)$/i;
-
 function handleEvent(ev) {
   if (!today || !ev) return;
-
-  // Filter out events with generic page names (not real profiles).
-  const name = ev.profile_name || "";
-  if (ev.type === "profile_viewed" && GENERIC_NAME_RE.test(name.trim())) {
-    // Still log it (for debugging) but don't count it.
-    today.events.push({ ...ev, _ts: Date.now(), _filtered: true });
-    return;
-  }
-
   today.events.push({ ...ev, _ts: Date.now() });
 
   if (ev.source === "linkedin") {
@@ -348,8 +337,7 @@ async function syncToServer() {
     if (!day) continue;
 
     // Build event detail arrays from the day's events for drill-down.
-    // Exclude filtered events (generic page names like "Feed", "Search").
-    const events = (day.events || []).filter(e => !e._filtered);
+    const events = day.events || [];
 
     // LinkedIn profiles viewed — deduplicated with name, title, URL, view count, timestamps
     const liProfileMap = new Map();
