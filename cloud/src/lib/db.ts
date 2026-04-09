@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT,
   team TEXT,
   api_key TEXT NOT NULL UNIQUE,
+  password_hash TEXT,
   role TEXT NOT NULL DEFAULT 'user', -- 'user' | 'admin'
   created_at INTEGER NOT NULL
 );

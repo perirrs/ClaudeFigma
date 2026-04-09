@@ -34,6 +34,39 @@ func NewUploader(cfg Config) *Uploader {
 	}
 }
 
+// Login exchanges email+password for an API key via /api/auth/login.
+// On success the key is stored in cfg.APIKey so subsequent Posts use it.
+func (u *Uploader) Login() error {
+	if u.cfg.Email == "" || u.cfg.Password == "" {
+		return nil // nothing to do — using raw API key
+	}
+	body, _ := json.Marshal(map[string]string{"email": u.cfg.Email, "password": u.cfg.Password})
+	url := strings.TrimRight(u.cfg.CloudURL, "/") + "/api/auth/login"
+	resp, err := u.client.Post(url, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("login request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return fmt.Errorf("login http %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
+	}
+	var result struct {
+		APIKey string `json:"api_key"`
+		Name   string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("login decode: %w", err)
+	}
+	if result.APIKey == "" {
+		return fmt.Errorf("login returned empty API key")
+	}
+	u.mu.Lock()
+	u.cfg.APIKey = result.APIKey
+	u.mu.Unlock()
+	return nil
+}
+
 func (u *Uploader) Send(buckets []Bucket) {
 	if len(buckets) == 0 {
 		return

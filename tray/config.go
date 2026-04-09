@@ -12,6 +12,8 @@ import (
 type Config struct {
 	CloudURL string `json:"cloud_url"`
 	APIKey   string `json:"api_key"`
+	Email    string `json:"email"`    // optional: login with email+password instead of raw key
+	Password string `json:"password"` // optional: login with email+password instead of raw key
 	PollSec  int    `json:"poll_sec"`  // foreground sample interval (default 5)
 	FlushSec int    `json:"flush_sec"` // POST interval (default 60)
 	IdleSec  int    `json:"idle_sec"`  // treat >N seconds no-input as idle (default 120)

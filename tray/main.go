@@ -34,6 +34,15 @@ func main() {
 	agg = NewAggregator(host, cfg.IdleSec, cfg.PollSec)
 	up = NewUploader(cfg)
 
+	// If email+password are configured, exchange them for an API key.
+	if cfg.Email != "" && cfg.Password != "" {
+		if err := up.Login(); err != nil {
+			log.Printf("login failed (will retry on next flush): %v", err)
+		} else {
+			log.Println("logged in via email+password")
+		}
+	}
+
 	go pollLoop()
 	go flushLoop()
 
@@ -127,6 +136,15 @@ func flushLoop() {
 	t := time.NewTicker(time.Duration(cfg.FlushSec) * time.Second)
 	defer t.Stop()
 	for now := range t.C {
+		// If we don't have an API key yet, try logging in again.
+		if cfg.Email != "" && cfg.Password != "" {
+			status, _, _ := up.Status()
+			if status != "ok" {
+				if err := up.Login(); err != nil {
+					log.Printf("re-login: %v", err)
+				}
+			}
+		}
 		buckets := agg.Drain(now)
 		if len(buckets) > 0 {
 			up.Send(buckets)

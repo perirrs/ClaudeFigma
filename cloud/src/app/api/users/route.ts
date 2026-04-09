@@ -1,7 +1,9 @@
 // Admin endpoint - list users and create new ones with auto-generated keys.
+// When a password is provided during creation, the user can log in with
+// email + password instead of pasting an API key.
 import { NextRequest, NextResponse } from "next/server";
 import { db, randomKey } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, hashPassword } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -19,9 +21,10 @@ export async function POST(req: NextRequest) {
   if (!body || !body.name) return NextResponse.json({ error: "name required" }, { status: 400 });
   const id = body.id || slugify(body.name) + "-" + randomKey(4);
   const key = randomKey();
+  const pwHash = body.password ? hashPassword(body.password) : null;
   db().prepare(
-    `INSERT INTO users (id, name, email, team, api_key, role, created_at) VALUES (?, ?, ?, ?, ?, 'user', ?)`
-  ).run(id, body.name, body.email || null, body.team || null, key, Date.now());
+    `INSERT INTO users (id, name, email, team, api_key, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?, ?, 'user', ?)`
+  ).run(id, body.name, body.email || null, body.team || null, key, pwHash, Date.now());
   return NextResponse.json({ id, name: body.name, email: body.email || null, team: body.team || null, api_key: key });
 }
 

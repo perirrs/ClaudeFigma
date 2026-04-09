@@ -41,6 +41,7 @@
   let currentProfile = null;
   let profileStart = null;
   let extractTimer = null;
+  let mutationObserver = null;
 
   function profileUrlFromLocation() {
     const m = location.pathname.match(/^\/in\/([^/?#]+)/);
@@ -48,25 +49,36 @@
   }
 
   function extractProfile() {
-    // Strategy 1: find the profile h1, then walk upward looking for the
-    // first sibling/descendant div that looks like a headline. This is the
-    // most reliable since LinkedIn always puts the headline directly
-    // adjacent to the name h1.
-    const h1 =
-      document.querySelector("h1.text-heading-xlarge") ||
-      document.querySelector("main h1") ||
-      document.querySelector("section.artdeco-card h1") ||
-      document.querySelector('.pv-top-card--list h1') ||
-      document.querySelector('.ph5 h1');
+    // Strategy 1: primary h1 name selectors. LinkedIn changes class names
+    // frequently so we try many combinations.
+    const h1Selectors = [
+      "h1.text-heading-xlarge",
+      "main h1",
+      "section.artdeco-card h1",
+      ".pv-top-card--list h1",
+      ".ph5 h1",
+      ".scaffold-layout__main h1",
+      "[data-view-name='profile-card'] h1",
+      ".profile-topcard-person-entity h1",
+      "h1[tabindex]",
+    ];
+    let h1 = null;
+    for (const sel of h1Selectors) {
+      h1 = document.querySelector(sel);
+      if (h1) break;
+    }
 
     let name = h1 ? text(h1) : null;
     let title = null;
 
+    // Walk up from the h1 looking for a headline sibling.
     if (h1) {
-      // Walk up to 4 levels looking for .text-body-medium siblings.
       let scope = h1.parentElement;
-      for (let i = 0; i < 4 && scope && !title; i++) {
-        const candidates = scope.querySelectorAll('.text-body-medium, [class*="headline"]');
+      for (let i = 0; i < 5 && scope && !title; i++) {
+        const candidates = scope.querySelectorAll(
+          '.text-body-medium, [class*="headline"], [class*="top-card-layout__headline"], ' +
+          '[class*="profile-topcard__summary-position"], [data-anonymize="headline"]'
+        );
         for (const c of candidates) {
           if (c === h1 || h1.contains(c)) continue;
           const t = text(c);
@@ -76,18 +88,27 @@
       }
     }
 
-    // Strategy 1b: the original flat selectors as a fallback.
+    // Strategy 1b: flat fallback selectors.
     if (!name) {
       name =
         text(document.querySelector("h1.text-heading-xlarge")) ||
         text(document.querySelector("main h1")) ||
-        text(document.querySelector('[data-generated-suggestion-target]'));
+        text(document.querySelector('[data-generated-suggestion-target]')) ||
+        text(document.querySelector('.scaffold-layout__main h1'));
     }
     if (!title) {
-      title =
-        text(document.querySelector("div.text-body-medium.break-words")) ||
-        text(document.querySelector('.pv-text-details__left-panel .text-body-medium'));
-      if (!looksLikeRealTitle(title)) title = null;
+      const titleSelectors = [
+        "div.text-body-medium.break-words",
+        ".pv-text-details__left-panel .text-body-medium",
+        ".profile-topcard-person-entity__summary",
+        "[data-anonymize='headline']",
+        ".text-body-medium:not(h1):not(a)",
+      ];
+      for (const sel of titleSelectors) {
+        const el = document.querySelector(sel);
+        const t = text(el);
+        if (looksLikeRealTitle(t)) { title = t; break; }
+      }
     }
 
     // Strategy 2: document.title / og:title ("Name - Title at Company | LinkedIn").
@@ -110,10 +131,7 @@
     }
 
     // Strategy 3: meta description. LinkedIn profile pages usually set this
-    // to "<Headline> · Experience: ... · Location: ..." — first segment is
-    // the job headline. If that's missing, fall back to meta description's
-    // "Location: X · 500+ connections · View …'s profile" style and try to
-    // pull a title from within.
+    // to "<Headline> · Experience: ... · Location: ...".
     if (!title) {
       const md = document.querySelector('meta[name="description"]');
       const raw = ((md && md.getAttribute("content")) || "").trim();
@@ -134,14 +152,15 @@
     const { name, title } = extractProfile();
     if (name && !currentProfile.name) currentProfile.name = name;
     if (title && !currentProfile.title) currentProfile.title = title;
-    // Stash last extraction result so the user can inspect it in DevTools
-    // via window.__paLast when "(unknown)" or "—" shows up.
     try { window.__paLast = { ...currentProfile, ts: Date.now() }; } catch {}
   }
 
   function flushProfile() {
     if (extractTimer) { clearInterval(extractTimer); extractTimer = null; }
+    if (mutationObserver) { mutationObserver.disconnect(); mutationObserver = null; }
     if (!currentProfile || profileStart == null) return;
+    // Do one last extraction attempt before flushing.
+    updateCurrentProfileMeta();
     const dwell = Date.now() - profileStart;
     if (dwell < 1500) { currentProfile = null; profileStart = null; return; }
     send("profile_viewed", {
@@ -161,9 +180,7 @@
     flushProfile();
     currentProfile = { url, name: null, title: null };
     profileStart = Date.now();
-    // Extract immediately, then retry every 500ms for up to 12s while the
-    // SPA progressively renders the header. Don't re-extract at flush time
-    // since by then the user may have navigated away and the DOM has moved.
+    // Extract immediately, then retry periodically while SPA renders.
     updateCurrentProfileMeta();
     let attempts = 0;
     extractTimer = setInterval(() => {
@@ -174,6 +191,15 @@
         extractTimer = null;
       }
     }, 500);
+
+    // Also use a MutationObserver to catch late renders that the interval misses.
+    if (mutationObserver) mutationObserver.disconnect();
+    mutationObserver = new MutationObserver(() => {
+      if (!currentProfile) return;
+      if (!currentProfile.name || !currentProfile.title) updateCurrentProfileMeta();
+    });
+    const main = document.querySelector("main") || document.body;
+    mutationObserver.observe(main, { childList: true, subtree: true });
   }
 
   // React to LinkedIn's client-side navigation.
@@ -189,11 +215,10 @@
 
   // ---- Connection & message detection ----
   //
-  // The DOM around LinkedIn's invite flow is volatile. Rather than trying
-  // to recognise every modal variant, we "arm" the detector whenever the
-  // user clicks a Connect / Invite button. Any Send click within 60s of
-  // an arming event counts as a connection_sent. This matches human flow
-  // exactly: click Connect → optionally add a note → click Send.
+  // The DOM around LinkedIn's invite flow is volatile. We "arm" the detector
+  // whenever the user clicks a Connect / Invite button. Any Send click within
+  // 60s of an arming event counts as a connection_sent. We also watch for
+  // the dialog closing with a success toast as a confirmation fallback.
 
   let armedAt = 0;
   let armedProfileUrl = null;
@@ -223,8 +248,13 @@
 
   function isConnectLabel(label) {
     if (!label) return false;
-    // "Connect", "Invite Alice to connect", "Connect with Alice"
-    return /^connect\b/.test(label) || /invite .* to connect/.test(label) || /^connect with /.test(label);
+    // "Connect", "Invite Alice to connect", "Connect with Alice",
+    // "Send an invite", "Invite to connect"
+    return /^connect\b/.test(label) ||
+      /invite .* to connect/.test(label) ||
+      /^connect with /.test(label) ||
+      /^send (an )?invite/.test(label) ||
+      /^invite to connect/.test(label);
   }
 
   function isSendLabel(label) {
@@ -238,12 +268,36 @@
     return !!el.closest(
       '.msg-form, .msg-form__contenteditable, .msg-overlay-conversation-bubble, ' +
       '.msg-convo-wrapper, [data-test-messaging-message-composer], ' +
-      '.msg-thread, .message-form-container'
+      '.msg-thread, .message-form-container, .msg-s-message-list-container'
     );
   }
 
+  // Watch for success toasts/banners that confirm a connection was sent.
+  // This catches cases where we missed the Send click.
+  let lastToastCheck = 0;
+  function checkConnectionToast() {
+    if (!isArmed()) return;
+    const now = Date.now();
+    if (now - lastToastCheck < 1000) return;
+    lastToastCheck = now;
+    // LinkedIn shows "Invitation sent" in an artdeco-toast or notification.
+    const toasts = document.querySelectorAll('.artdeco-toast-item, [role="alert"], .artdeco-notification');
+    for (const t of toasts) {
+      const txt = (t.textContent || "").toLowerCase();
+      if (/invitation sent|invite sent|connection request sent/.test(txt)) {
+        send("connection_sent", {
+          profile_url: armedProfileUrl || profileUrlFromLocation(),
+          profile_name: armedProfileName || (currentProfile && currentProfile.name),
+          profile_title: armedProfileTitle || (currentProfile && currentProfile.title),
+        });
+        disarm();
+        return;
+      }
+    }
+  }
+
   document.addEventListener("click", (e) => {
-    const target = e.target.closest("button, a, [role='button']");
+    const target = e.target.closest("button, a, [role='button'], [role='link']");
     if (!target) return;
     const label = labelOf(target);
 
@@ -251,6 +305,10 @@
     if (isConnectLabel(label)) {
       arm();
       send("connect_clicked", { profile_url: profileUrlFromLocation() });
+      // Start polling for success toast in case we miss the Send click.
+      setTimeout(checkConnectionToast, 2000);
+      setTimeout(checkConnectionToast, 4000);
+      setTimeout(checkConnectionToast, 6000);
       return;
     }
 
@@ -285,6 +343,13 @@
       if (/message|new message|write a message/.test(blob)) {
         send("message_sent", {
           profile_url: profileUrlFromLocation(),
+          profile_name: currentProfile && currentProfile.name,
+          profile_title: currentProfile && currentProfile.title,
+        });
+      } else if (/connect|invitation/.test(blob)) {
+        // Dialog about connection invitation — count it.
+        send("connection_sent", {
+          profile_url: (currentProfile && currentProfile.url) || profileUrlFromLocation(),
           profile_name: currentProfile && currentProfile.name,
           profile_title: currentProfile && currentProfile.title,
         });
