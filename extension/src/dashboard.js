@@ -194,6 +194,108 @@ document.getElementById("export-csv").addEventListener("click", async () => {
   URL.revokeObjectURL(url);
 });
 
+// ---- Period summaries (week / month / all time) ----
+
+let allDays = []; // cached list of dates that have data
+let activePeriod = "today";
+
+function datesForPeriod(period) {
+  const today = todayKey();
+  if (period === "today") return [today];
+  const todayDate = new Date(today + "T12:00:00");
+
+  if (period === "week") {
+    // Last 7 days including today.
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(todayDate);
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    return dates;
+  }
+  if (period === "month") {
+    // Last 30 days including today.
+    const dates = [];
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(todayDate);
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    return dates;
+  }
+  if (period === "all") {
+    return allDays.length ? allDays : [today];
+  }
+  return [today];
+}
+
+const periodLabels = {
+  today: "Today",
+  week: "This Week (last 7 days)",
+  month: "This Month (last 30 days)",
+  all: "All Time",
+};
+
+async function loadPeriodSummary(period) {
+  activePeriod = period;
+  // Update tab active states.
+  document.querySelectorAll(".period-tab").forEach(t => {
+    t.classList.toggle("active", t.dataset.period === period);
+  });
+
+  const banner = document.getElementById("summary-banner");
+  if (period === "today") {
+    banner.style.display = "none";
+    return;
+  }
+  banner.style.display = "block";
+  document.getElementById("summary-label").textContent = periodLabels[period];
+
+  const dates = datesForPeriod(period);
+  const agg = await chrome.runtime.sendMessage({ type: "pa-get-range", dates });
+  if (!agg) return;
+
+  document.getElementById("sg-active").textContent = fmt(agg.activeMs);
+  document.getElementById("sg-idle").textContent = fmt(agg.idleMs);
+  document.getElementById("sg-li").textContent = fmt(agg.linkedinMs);
+  document.getElementById("sg-nk").textContent = fmt(agg.naukriMs);
+
+  document.getElementById("sg-li-prof").textContent = (agg.liProfiles || []).length;
+  document.getElementById("sg-li-conn").textContent = agg.liConnections || 0;
+  document.getElementById("sg-li-msg").textContent = agg.liMessages || 0;
+  document.getElementById("sg-nk-prof").textContent = (agg.nkProfiles || []).length;
+  document.getElementById("sg-nk-cv").textContent = agg.naukriDownloads || 0;
+  document.getElementById("sg-nk-contact").textContent = agg.naukriContacts || 0;
+  document.getElementById("sg-days").textContent = agg.dayCount || 0;
+
+  // Top domains for the period.
+  const domains = Object.entries(agg.domains || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const dEl = document.getElementById("sg-domains");
+  if (domains.length === 0) {
+    dEl.innerHTML = '<div class="empty">No data</div>';
+  } else {
+    const maxMs = domains[0][1];
+    dEl.innerHTML = domains.map(([d, ms]) => {
+      const pct = ((ms / maxMs) * 100).toFixed(1);
+      return `<div class="domain-row">
+        <span class="domain-name">${d}</span>
+        <span class="domain-time">${fmt(ms)}</span>
+      </div>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>`;
+    }).join("");
+  }
+}
+
+// Period tab click handlers.
+document.querySelectorAll(".period-tab").forEach(tab => {
+  tab.addEventListener("click", () => loadPeriodSummary(tab.dataset.period));
+});
+
 // Boot
-loadDay(todayKey());
-loadHistory();
+async function boot() {
+  allDays = await chrome.runtime.sendMessage({ type: "pa-get-days-list" }) || [];
+  loadDay(todayKey());
+  loadHistory();
+}
+boot();

@@ -222,6 +222,52 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     });
     return true;
   }
+  if (msg.type === "pa-get-range") {
+    // Aggregate multiple days for weekly/monthly/all-time summaries.
+    // msg.dates = array of date strings to aggregate
+    chrome.storage.local.get(null).then((all) => {
+      const dates = msg.dates || [];
+      const agg = {
+        activeMs: 0, idleMs: 0, linkedinMs: 0, naukriMs: 0,
+        liProfiles: [], nkProfiles: [],
+        liConnections: 0, liMessages: 0, liSearches: 0,
+        naukriDownloads: 0, naukriContacts: 0, naukriSearches: 0,
+        domains: {}, events: [], dayCount: 0,
+      };
+      const liProfileSet = new Set();
+      const nkProfileSet = new Set();
+      for (const date of dates) {
+        const day = date === (today && today.date) ? today : all[`day_${date}`];
+        if (!day) continue;
+        agg.dayCount++;
+        agg.activeMs += day.activeMs || 0;
+        agg.idleMs += day.idleMs || 0;
+        agg.linkedinMs += day.linkedinMs || 0;
+        agg.naukriMs += day.naukriMs || 0;
+        agg.liConnections += day.liConnections || 0;
+        agg.liMessages += day.liMessages || 0;
+        agg.liSearches += day.liSearches || 0;
+        agg.naukriDownloads += day.naukriDownloads || 0;
+        agg.naukriContacts += day.naukriContacts || 0;
+        agg.naukriSearches += day.naukriSearches || 0;
+        for (const u of (day.liProfiles || [])) liProfileSet.add(u);
+        for (const u of (day.nkProfiles || [])) nkProfileSet.add(u);
+        for (const [d, ms] of Object.entries(day.domains || {})) {
+          agg.domains[d] = (agg.domains[d] || 0) + ms;
+        }
+        // Include last 500 events per range request.
+        for (const ev of (day.events || []).slice(-500)) {
+          agg.events.push(ev);
+        }
+      }
+      agg.liProfiles = [...liProfileSet];
+      agg.nkProfiles = [...nkProfileSet];
+      // Cap events.
+      if (agg.events.length > 1000) agg.events = agg.events.slice(-1000);
+      sendResponse(agg);
+    });
+    return true;
+  }
 });
 
 // ---- Periodic save ----

@@ -63,6 +63,25 @@
     .history-day { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
     .history-day:hover { color: var(--green); }
 
+    .period-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+    .period-tab { padding: 7px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--muted); font-size: 12px; font-weight: 500; cursor: pointer; }
+    .period-tab:hover { border-color: var(--green); color: var(--text); }
+    .period-tab.active { border-color: var(--green); color: var(--green); background: rgba(74,222,128,0.06); }
+    .summary-banner { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; }
+    .summary-banner .period-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .summary-grid .sg-item { }
+    .sg-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .sg-value { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .sg-value.green { color: var(--green); }
+    .sg-value.blue { color: var(--blue); }
+    .summary-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .ss-item { text-align: center; }
+    .ss-val { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .ss-label { font-size: 9px; color: var(--muted); text-transform: uppercase; }
+    .summary-domains { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .summary-domains h3 { font-size: 11px; margin: 0 0 8px; color: var(--muted); }
+
     @media (max-width: 700px) {
       .kpi-grid { grid-template-columns: repeat(2, 1fr); }
       .stats-row { grid-template-columns: repeat(3, 1fr); }
@@ -83,6 +102,35 @@
         <button id="today-btn">Today</button>
       </div>
       <button class="export-btn" id="export-csv">Export CSV</button>
+    </div>
+
+    <div class="period-tabs">
+      <div class="period-tab active" data-period="today">Today</div>
+      <div class="period-tab" data-period="week">This Week</div>
+      <div class="period-tab" data-period="month">This Month</div>
+      <div class="period-tab" data-period="all">All Time</div>
+    </div>
+
+    <div id="summary-banner" class="summary-banner" style="display:none;">
+      <div class="period-label" id="summary-label">This Week</div>
+      <div class="summary-grid">
+        <div class="sg-item"><div class="sg-label">Active time</div><div class="sg-value" id="sg-active">0m</div></div>
+        <div class="sg-item"><div class="sg-label">Idle time</div><div class="sg-value" id="sg-idle">0m</div></div>
+        <div class="sg-item"><div class="sg-label">LinkedIn</div><div class="sg-value green" id="sg-li">0m</div></div>
+        <div class="sg-item"><div class="sg-label">Naukri</div><div class="sg-value blue" id="sg-nk">0m</div></div>
+      </div>
+      <div class="summary-stats">
+        <div class="ss-item"><div class="ss-val" id="sg-li-prof">0</div><div class="ss-label">LI Profiles</div></div>
+        <div class="ss-item"><div class="ss-val" id="sg-li-conn">0</div><div class="ss-label">Connections</div></div>
+        <div class="ss-item"><div class="ss-val" id="sg-li-msg">0</div><div class="ss-label">Messages</div></div>
+        <div class="ss-item"><div class="ss-val" id="sg-nk-prof">0</div><div class="ss-label">NK Profiles</div></div>
+        <div class="ss-item"><div class="ss-val" id="sg-nk-cv">0</div><div class="ss-label">CVs</div></div>
+        <div class="ss-item"><div class="ss-val" id="sg-nk-contact">0</div><div class="ss-label">Contacts</div></div>
+      </div>
+      <div class="summary-domains">
+        <h3>Top Domains (<span id="sg-days">0</span> days)</h3>
+        <div id="sg-domains"><div class="empty">No data</div></div>
+      </div>
     </div>
 
     <div class="kpi-grid">
