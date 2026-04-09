@@ -177,15 +177,14 @@
     if (extractTimer) { clearInterval(extractTimer); extractTimer = null; }
     if (mutationObserver) { mutationObserver.disconnect(); mutationObserver = null; }
     if (!currentProfile || profileStart == null) return;
-    // Do one last extraction attempt before flushing.
+    // Only send final event for actual /in/ profile pages with a real name.
     updateCurrentProfileMeta();
     const dwell = Date.now() - profileStart;
-    // Always send if we haven't sent yet and dwell >= 1500ms.
-    // If we already sent an early event, send an update with final dwell.
-    if (dwell >= 1500) {
+    const name = currentProfile.name;
+    if (dwell >= 1500 && currentProfile.url && name && !GENERIC_HEADING_RE.test(name.trim())) {
       send("profile_viewed", {
         profile_url: currentProfile.url,
-        profile_name: currentProfile.name,
+        profile_name: name,
         profile_title: currentProfile.title,
         meta: { dwell_ms: dwell, final: true },
       });
@@ -283,11 +282,43 @@
   let armedProfileTitle = null;
   const ARM_WINDOW_MS = 60_000;
 
-  function arm() {
+  function arm(clickTarget) {
     armedAt = Date.now();
     armedProfileUrl = (currentProfile && currentProfile.url) || profileUrlFromLocation();
     armedProfileName = currentProfile && currentProfile.name;
     armedProfileTitle = currentProfile && currentProfile.title;
+
+    // If on a search/feed page, try to extract name from the card containing the Connect button.
+    if (clickTarget && (!armedProfileName || GENERIC_HEADING_RE.test((armedProfileName || "").trim()))) {
+      const card = clickTarget.closest('[data-view-name], .entity-result, .reusable-search__result-container, li, [class*="search-result"]');
+      if (card) {
+        // Try to find the profile link and name within this card.
+        const nameEl = card.querySelector('span[aria-hidden="true"], .entity-result__title-text a, a[href*="/in/"] span');
+        if (nameEl) {
+          const n = text(nameEl);
+          if (n && !GENERIC_HEADING_RE.test(n)) armedProfileName = n;
+        }
+        // Try to get the profile URL from the card.
+        const link = card.querySelector('a[href*="/in/"]');
+        if (link) {
+          const href = link.getAttribute("href");
+          const m = href && href.match(/\/in\/([^/?#]+)/);
+          if (m) armedProfileUrl = `https://www.linkedin.com/in/${m[1]}/`;
+        }
+        // Title
+        const titleEl = card.querySelector('.entity-result__primary-subtitle, [class*="subtitle"]');
+        if (titleEl) {
+          const t = text(titleEl);
+          if (looksLikeRealTitle(t)) armedProfileTitle = t;
+        }
+      }
+    }
+
+    // Never store generic names.
+    if (armedProfileName && GENERIC_HEADING_RE.test(armedProfileName.trim())) {
+      armedProfileName = null;
+    }
+
     try { window.__paArmed = { at: armedAt, url: armedProfileUrl, name: armedProfileName, title: armedProfileTitle }; } catch {}
   }
   function disarm() {
@@ -449,8 +480,8 @@
 
     // Arm on Connect click.
     if (isConnectLabel(label)) {
-      arm();
-      send("connect_clicked", { profile_url: profileUrlFromLocation() });
+      arm(target);
+      send("connect_clicked", { profile_url: armedProfileUrl || profileUrlFromLocation() });
       setTimeout(checkConnectionToast, 2000);
       setTimeout(checkConnectionToast, 4000);
       setTimeout(checkConnectionToast, 6000);
