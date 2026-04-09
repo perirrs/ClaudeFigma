@@ -162,15 +162,40 @@
     // Do one last extraction attempt before flushing.
     updateCurrentProfileMeta();
     const dwell = Date.now() - profileStart;
-    if (dwell < 1500) { currentProfile = null; profileStart = null; return; }
+    // Always send if we haven't sent yet and dwell >= 1500ms.
+    // If we already sent an early event, send an update with final dwell.
+    if (dwell >= 1500) {
+      send("profile_viewed", {
+        profile_url: currentProfile.url,
+        profile_name: currentProfile.name,
+        profile_title: currentProfile.title,
+        meta: { dwell_ms: dwell, final: true },
+      });
+    }
+    currentProfile = null;
+    profileStart = null;
+    profileSent = false;
+  }
+
+  // Send an early profile_viewed event after ~2s so the count shows up
+  // immediately while the user is still on the page. A final event with
+  // the full dwell time is sent when they navigate away.
+  let profileSent = false;
+
+  function maybeSendEarly() {
+    if (!currentProfile || profileStart == null || profileSent) return;
+    const dwell = Date.now() - profileStart;
+    if (dwell < 2000) return;
+    // Need at least a name to count it.
+    updateCurrentProfileMeta();
+    if (!currentProfile.name && !currentProfile.url) return;
+    profileSent = true;
     send("profile_viewed", {
       profile_url: currentProfile.url,
       profile_name: currentProfile.name,
       profile_title: currentProfile.title,
-      meta: { dwell_ms: dwell },
+      meta: { dwell_ms: dwell, early: true },
     });
-    currentProfile = null;
-    profileStart = null;
   }
 
   function maybeStartProfile() {
@@ -180,12 +205,15 @@
     flushProfile();
     currentProfile = { url, name: null, title: null };
     profileStart = Date.now();
+    profileSent = false;
     // Extract immediately, then retry periodically while SPA renders.
     updateCurrentProfileMeta();
     let attempts = 0;
     extractTimer = setInterval(() => {
       attempts += 1;
       updateCurrentProfileMeta();
+      // Fire early event after ~2s so the overlay/popup count updates.
+      maybeSendEarly();
       if ((currentProfile && currentProfile.name && currentProfile.title) || attempts >= 24) {
         clearInterval(extractTimer);
         extractTimer = null;
@@ -211,6 +239,17 @@
   window.addEventListener("beforeunload", flushProfile);
   window.addEventListener("pagehide", flushProfile);
   window.addEventListener("visibilitychange", () => { if (document.hidden) flushProfile(); });
+
+  // URL polling: LinkedIn's SPA navigation doesn't always trigger pushState.
+  // Poll every second to detect URL changes that the hooks missed.
+  let lastHref = location.href;
+  setInterval(() => {
+    if (location.href !== lastHref) {
+      lastHref = location.href;
+      maybeStartProfile();
+    }
+  }, 1000);
+
   maybeStartProfile();
 
   // ---- Connection & message detection ----
