@@ -70,7 +70,19 @@ document.getElementById("test-sync").addEventListener("click", async () => {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { "X-API-Key": token, "Authorization": `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ test: true, recruiterName: name }),
+      body: JSON.stringify({
+        recruiterName: name,
+        recruiterEmail: document.getElementById("recruiterEmail").value.trim() || "test@test.com",
+        extensionVersion: "0.4.0",
+        syncedAt: new Date().toISOString(),
+        days: [{
+          date: new Date().toISOString().slice(0, 10),
+          activeMs: 0, idleMs: 0, linkedinMs: 0, naukriMs: 0,
+          liProfilesCount: 0, nkProfilesCount: 0, liConnections: 0,
+          liMessages: 0, liSearches: 0, naukriDownloads: 0,
+          naukriContacts: 0, naukriSearches: 0, topDomains: [],
+        }],
+      }),
     });
     if (res.ok) {
       document.getElementById("sync-status").textContent = "Connection OK!";
