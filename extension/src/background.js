@@ -268,6 +268,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     });
     return true;
   }
+  if (msg.type === "pa-sync-now") {
+    bufferDwell();
+    saveToday().then(() => syncToServer()).then((result) => {
+      sendResponse(result || { ok: true, synced: 0 });
+    });
+    return true;
+  }
 });
 
 // ---- Periodic save ----
@@ -305,7 +312,7 @@ async function getSyncConfig() {
 
 async function syncToServer() {
   const cfg = await getSyncConfig();
-  if (!cfg.syncEnabled || !cfg.syncUrl || !cfg.recruiterName) return;
+  if (!cfg.syncEnabled || !cfg.syncUrl || !cfg.recruiterName) return { ok: false, error: "Sync not configured", synced: 0 };
 
   // Gather today + last 7 days of data to keep server up to date.
   const dates = [];
@@ -369,6 +376,7 @@ async function syncToServer() {
   } else if (lastError) {
     await chrome.storage.local.set({ lastSyncTime: Date.now(), lastSyncError: lastError });
   }
+  return { ok: !lastError, synced, error: lastError };
 }
 
 // ---- Boot ----
