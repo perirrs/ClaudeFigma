@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Productivity Analyser",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Tracks browsing time and recruiter activity on LinkedIn & Naukri. Everything stored locally — no server needed.",
   "permissions": ["tabs", "activeTab", "storage", "idle", "alarms"],
   "host_permissions": [
     "https://www.linkedin.com/*",
     "https://*.linkedin.com/*",
     "https://www.naukri.com/*",
-    "https://*.naukri.com/*"
+    "https://*.naukri.com/*",
+    "https://*/*"
   ],
   "background": {
     "scripts": ["background.js"]

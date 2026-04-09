@@ -4,33 +4,76 @@
     <meta charset="utf-8" />
     <title>Productivity Analyser — Settings</title>
     <style>
-      body { font-family: -apple-system, system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 20px; background: #0b1016; color: #e6edf3; }
+      body { font-family: -apple-system, system-ui, sans-serif; max-width: 520px; margin: 40px auto; padding: 0 20px; background: #0b1016; color: #e6edf3; }
       h1 { font-size: 18px; color: #4ade80; margin: 0 0 8px; }
       p { color: #8b98a5; font-size: 13px; line-height: 1.5; }
-      .toggle { display: flex; align-items: center; gap: 10px; margin-top: 20px; font-size: 13px; color: #e6edf3; cursor: pointer; }
+      h2 { font-size: 14px; margin: 28px 0 12px; color: #e6edf3; border-bottom: 1px solid #1b2530; padding-bottom: 8px; }
+
+      .field { margin-bottom: 14px; }
+      .field label { display: block; font-size: 11px; color: #8b98a5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+      .field input[type="text"], .field input[type="email"], .field input[type="url"] {
+        width: 100%; padding: 8px 10px; background: #121a25; border: 1px solid #1b2530; border-radius: 6px;
+        color: #e6edf3; font-size: 13px; outline: none;
+      }
+      .field input:focus { border-color: #4ade80; }
+
+      .toggle { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13px; color: #e6edf3; cursor: pointer; }
       .toggle input { margin: 0; width: 18px; height: 18px; }
-      button { background: #4ade80; color: #000; border: none; border-radius: 6px; padding: 10px 16px; font-weight: 600; font-size: 13px; margin-top: 20px; cursor: pointer; }
-      button.danger { background: #f87171; margin-left: 10px; }
-      .status { font-size: 12px; margin-top: 12px; color: #4ade80; }
+
+      .btn-row { margin-top: 20px; display: flex; gap: 10px; }
+      button { background: #4ade80; color: #000; border: none; border-radius: 6px; padding: 10px 16px; font-weight: 600; font-size: 13px; cursor: pointer; }
+      button.danger { background: #f87171; }
+      button.secondary { background: #1b2530; color: #e6edf3; border: 1px solid #2a3545; }
+      button.secondary:hover { border-color: #4ade80; }
+
+      .status { font-size: 12px; margin-top: 12px; color: #4ade80; min-height: 18px; }
+      .status.error { color: #f87171; }
+      .sync-status { font-size: 11px; color: #8b98a5; margin-top: 8px; }
+
       .info { margin-top: 24px; padding: 14px; background: #121a25; border: 1px solid #1b2530; border-radius: 8px; font-size: 12px; color: #8b98a5; line-height: 1.6; }
     </style>
   </head>
   <body>
     <h1>Productivity Analyser — Settings</h1>
-    <p>Everything is stored locally in your browser. No server or API key needed.</p>
+    <p>Everything is stored locally in your browser. Optionally sync to your team dashboard.</p>
 
+    <h2>Recruiter Identity</h2>
+    <div class="field">
+      <label>Full Name</label>
+      <input type="text" id="recruiterName" placeholder="e.g. Raghu Peri" />
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="recruiterEmail" placeholder="e.g. raghu@company.com" />
+    </div>
+
+    <h2>Team Sync</h2>
+    <label class="toggle"><input id="syncEnabled" type="checkbox" /> Enable sync to team dashboard</label>
+    <div class="field" style="margin-top: 12px;">
+      <label>Server URL</label>
+      <input type="url" id="syncUrl" placeholder="https://your-app.base44.app/api/pa-sync" />
+    </div>
+    <div class="field">
+      <label>Team Token (provided by admin)</label>
+      <input type="text" id="syncToken" placeholder="paste token here" />
+    </div>
+    <div class="sync-status" id="sync-status"></div>
+    <button class="secondary" id="test-sync" style="margin-top:8px;">Test Connection</button>
+
+    <h2>Display</h2>
     <label class="toggle"><input id="showOverlay" type="checkbox" checked /> Show floating stats overlay on pages</label>
 
-    <div>
-      <button id="save">Save</button>
-      <button id="clear-data" class="danger">Clear all data</button>
+    <div class="btn-row">
+      <button id="save">Save Settings</button>
+      <button id="clear-data" class="danger">Clear All Data</button>
     </div>
     <div id="status" class="status"></div>
 
     <div class="info">
       <strong>How it works:</strong><br>
-      The extension automatically tracks your browsing time, LinkedIn activity (profile views, connections, messages), and Naukri activity (profile views, CV downloads, contact reveals).<br><br>
-      Click the extension icon to see today's summary. Click "Full Dashboard" for detailed history, profile lists, and CSV export.
+      The extension tracks your browsing time, LinkedIn activity (profile views, connections, messages), and Naukri activity (profile views, CV downloads, contact reveals).<br><br>
+      When sync is enabled, a daily summary is sent to your team dashboard every 5 minutes. No raw browsing data leaves your machine — only aggregated recruiter metrics.<br><br>
+      Click the extension icon for today's summary. Click "Full Dashboard" for detailed history.
     </div>
 
     <script src="options.js"></script>

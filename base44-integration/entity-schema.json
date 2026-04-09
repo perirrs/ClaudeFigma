@@ -1,0 +1,28 @@
+{
+  "name": "RecruiterActivity",
+  "description": "Daily productivity summary synced from each recruiter's Chrome extension",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "recruiterName":    { "type": "string", "description": "Recruiter's full name" },
+      "recruiterEmail":   { "type": "string", "format": "email", "description": "Recruiter's email" },
+      "date":             { "type": "string", "format": "date", "description": "Activity date (YYYY-MM-DD)" },
+      "activeMs":         { "type": "number", "description": "Total active browsing time (ms)" },
+      "idleMs":           { "type": "number", "description": "Total idle time (ms)" },
+      "linkedinMs":       { "type": "number", "description": "Time on LinkedIn (ms)" },
+      "naukriMs":         { "type": "number", "description": "Time on Naukri (ms)" },
+      "liProfilesCount":  { "type": "integer", "description": "Unique LinkedIn profiles viewed" },
+      "nkProfilesCount":  { "type": "integer", "description": "Unique Naukri profiles viewed" },
+      "liConnections":    { "type": "integer", "description": "LinkedIn connections sent" },
+      "liMessages":       { "type": "integer", "description": "LinkedIn messages sent" },
+      "liSearches":       { "type": "integer", "description": "LinkedIn searches run" },
+      "naukriDownloads":  { "type": "integer", "description": "Naukri CVs downloaded" },
+      "naukriContacts":   { "type": "integer", "description": "Naukri contacts revealed" },
+      "naukriSearches":   { "type": "integer", "description": "Naukri searches run" },
+      "topDomains":       { "type": "array", "items": { "type": "object", "properties": { "domain": { "type": "string" }, "ms": { "type": "number" } } } },
+      "syncedAt":         { "type": "string", "format": "date-time", "description": "When this data was last synced" },
+      "extensionVersion": { "type": "string", "description": "Extension version" }
+    },
+    "required": ["recruiterName", "date"]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "properties": {
+    "syncUrl":     { "type": "string", "description": "Server URL for team sync" },
+    "syncToken":   { "type": "string", "description": "Team authentication token" },
+    "syncEnabled": { "type": "boolean", "description": "Enable automatic sync" },
+    "showOverlay": { "type": "boolean", "description": "Show floating overlay" }
+  }
+}

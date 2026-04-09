@@ -1,0 +1,27 @@
+{
+  "_comment": [
+    "Chrome Enterprise policy to force-install the extension on managed devices.",
+    "Place this file at: /etc/opt/chrome/policies/managed/productivity-analyser.json (Linux)",
+    "Or configure via Group Policy (Windows) / MDM profile (macOS).",
+    "",
+    "Option A: Self-hosted CRX with auto-update XML",
+    "  Replace YOUR_EXTENSION_ID with the actual extension ID after packing.",
+    "  Host the .crx and updates.xml on your internal server.",
+    "",
+    "Option B: Chrome Web Store (recommended for auto-updates)",
+    "  Upload to Chrome Web Store (can be unlisted), then use the CWS extension ID.",
+    "  Format: EXTENSION_ID (no update URL needed for CWS)."
+  ],
+
+  "ExtensionInstallForcelist": [
+    "YOUR_EXTENSION_ID_HERE;https://internal.company.com/extensions/updates.xml"
+  ],
+
+  "ExtensionSettings": {
+    "YOUR_EXTENSION_ID_HERE": {
+      "installation_mode": "force_installed",
+      "update_url": "https://internal.company.com/extensions/updates.xml",
+      "toolbar_pin": "force_pinned"
+    }
+  }
+}

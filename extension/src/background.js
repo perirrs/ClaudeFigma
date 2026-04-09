@@ -272,12 +272,95 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 // ---- Periodic save ----
 chrome.alarms.create("pa-save", { periodInMinutes: 0.5 });
+chrome.alarms.create("pa-sync", { periodInMinutes: 5 });
+
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === "pa-save") {
     bufferDwell();
     await saveToday();
   }
+  if (alarm.name === "pa-sync") {
+    bufferDwell();
+    await saveToday();
+    await syncToServer();
+  }
 });
+
+// ---- Team sync ----
+async function getSyncConfig() {
+  // Managed storage (enterprise policy) takes priority, then user settings.
+  let managed = {};
+  try { managed = await chrome.storage.managed.get(null); } catch {}
+  const user = await chrome.storage.sync.get(["syncEnabled", "syncUrl", "syncToken", "recruiterName", "recruiterEmail"]);
+  return {
+    syncEnabled: managed.syncEnabled ?? user.syncEnabled,
+    syncUrl: managed.syncUrl || user.syncUrl,
+    syncToken: managed.syncToken || user.syncToken,
+    recruiterName: user.recruiterName,
+    recruiterEmail: user.recruiterEmail,
+  };
+}
+
+async function syncToServer() {
+  const cfg = await getSyncConfig();
+  if (!cfg.syncEnabled || !cfg.syncUrl || !cfg.recruiterName) return;
+
+  // Gather today + last 7 days of data to keep server up to date.
+  const dates = [];
+  const todayDate = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(todayDate);
+    d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().slice(0, 10));
+  }
+
+  const all = await chrome.storage.local.get(null);
+  const days = [];
+  for (const date of dates) {
+    const day = (today && today.date === date) ? today : all[`day_${date}`];
+    if (!day) continue;
+    // Send summary only, not full events (privacy).
+    days.push({
+      date: day.date,
+      activeMs: day.activeMs || 0,
+      idleMs: day.idleMs || 0,
+      linkedinMs: day.linkedinMs || 0,
+      naukriMs: day.naukriMs || 0,
+      liProfilesCount: (day.liProfiles || []).length,
+      nkProfilesCount: (day.nkProfiles || []).length,
+      liConnections: day.liConnections || 0,
+      liMessages: day.liMessages || 0,
+      liSearches: day.liSearches || 0,
+      naukriDownloads: day.naukriDownloads || 0,
+      naukriContacts: day.naukriContacts || 0,
+      naukriSearches: day.naukriSearches || 0,
+      topDomains: Object.entries(day.domains || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([d, ms]) => ({ domain: d, ms })),
+    });
+  }
+
+  if (days.length === 0) return;
+
+  const payload = {
+    recruiterName: cfg.recruiterName,
+    recruiterEmail: cfg.recruiterEmail || "",
+    extensionVersion: chrome.runtime.getManifest().version,
+    syncedAt: new Date().toISOString(),
+    days,
+  };
+
+  try {
+    const headers = { "Content-Type": "application/json" };
+    if (cfg.syncToken) headers["Authorization"] = `Bearer ${cfg.syncToken}`;
+    const res = await fetch(cfg.syncUrl, { method: "POST", headers, body: JSON.stringify(payload) });
+    if (res.ok) {
+      await chrome.storage.local.set({ lastSyncTime: Date.now(), lastSyncError: null });
+    } else {
+      await chrome.storage.local.set({ lastSyncTime: Date.now(), lastSyncError: `HTTP ${res.status}` });
+    }
+  } catch (e) {
+    await chrome.storage.local.set({ lastSyncTime: Date.now(), lastSyncError: e.message });
+  }
+}
 
 // ---- Boot ----
 (async () => {
