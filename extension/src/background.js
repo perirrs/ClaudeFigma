@@ -317,12 +317,23 @@ async function syncToServer() {
   }
 
   const all = await chrome.storage.local.get(null);
-  const days = [];
+  const headers = { "Content-Type": "application/json" };
+  if (cfg.syncToken) {
+    headers["X-API-Key"] = cfg.syncToken;
+    headers["Authorization"] = `Bearer ${cfg.syncToken}`;
+  }
+
+  let lastError = null;
+  let synced = 0;
+
   for (const date of dates) {
     const day = (today && today.date === date) ? today : all[`day_${date}`];
     if (!day) continue;
-    // Send summary only, not full events (privacy).
-    days.push({
+
+    // Send one flat record per day (Base44 expects recruiterEmail + date at top level).
+    const payload = {
+      recruiterName: cfg.recruiterName,
+      recruiterEmail: cfg.recruiterEmail || "",
       date: day.date,
       activeMs: day.activeMs || 0,
       idleMs: day.idleMs || 0,
@@ -337,33 +348,26 @@ async function syncToServer() {
       naukriContacts: day.naukriContacts || 0,
       naukriSearches: day.naukriSearches || 0,
       topDomains: Object.entries(day.domains || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([d, ms]) => ({ domain: d, ms })),
-    });
+      extensionVersion: chrome.runtime.getManifest().version,
+      syncedAt: new Date().toISOString(),
+    };
+
+    try {
+      const res = await fetch(cfg.syncUrl, { method: "POST", headers, body: JSON.stringify(payload) });
+      if (res.ok) {
+        synced++;
+      } else {
+        lastError = `HTTP ${res.status}`;
+      }
+    } catch (e) {
+      lastError = e.message;
+    }
   }
 
-  if (days.length === 0) return;
-
-  const payload = {
-    recruiterName: cfg.recruiterName,
-    recruiterEmail: cfg.recruiterEmail || "",
-    extensionVersion: chrome.runtime.getManifest().version,
-    syncedAt: new Date().toISOString(),
-    days,
-  };
-
-  try {
-    const headers = { "Content-Type": "application/json" };
-    if (cfg.syncToken) {
-      headers["X-API-Key"] = cfg.syncToken;
-      headers["Authorization"] = `Bearer ${cfg.syncToken}`;
-    }
-    const res = await fetch(cfg.syncUrl, { method: "POST", headers, body: JSON.stringify(payload) });
-    if (res.ok) {
-      await chrome.storage.local.set({ lastSyncTime: Date.now(), lastSyncError: null });
-    } else {
-      await chrome.storage.local.set({ lastSyncTime: Date.now(), lastSyncError: `HTTP ${res.status}` });
-    }
-  } catch (e) {
-    await chrome.storage.local.set({ lastSyncTime: Date.now(), lastSyncError: e.message });
+  if (synced > 0 && !lastError) {
+    await chrome.storage.local.set({ lastSyncTime: Date.now(), lastSyncError: null });
+  } else if (lastError) {
+    await chrome.storage.local.set({ lastSyncTime: Date.now(), lastSyncError: lastError });
   }
 }
 

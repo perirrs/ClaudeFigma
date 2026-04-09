@@ -73,15 +73,13 @@ document.getElementById("test-sync").addEventListener("click", async () => {
       body: JSON.stringify({
         recruiterName: name,
         recruiterEmail: document.getElementById("recruiterEmail").value.trim() || "test@test.com",
+        date: new Date().toISOString().slice(0, 10),
+        activeMs: 0, idleMs: 0, linkedinMs: 0, naukriMs: 0,
+        liProfilesCount: 0, nkProfilesCount: 0, liConnections: 0,
+        liMessages: 0, liSearches: 0, naukriDownloads: 0,
+        naukriContacts: 0, naukriSearches: 0, topDomains: [],
         extensionVersion: "0.4.0",
         syncedAt: new Date().toISOString(),
-        days: [{
-          date: new Date().toISOString().slice(0, 10),
-          activeMs: 0, idleMs: 0, linkedinMs: 0, naukriMs: 0,
-          liProfilesCount: 0, nkProfilesCount: 0, liConnections: 0,
-          liMessages: 0, liSearches: 0, naukriDownloads: 0,
-          naukriContacts: 0, naukriSearches: 0, topDomains: [],
-        }],
       }),
     });
     if (res.ok) {
