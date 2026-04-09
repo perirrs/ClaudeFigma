@@ -13,6 +13,7 @@
   const POLL_MS = 3000;
   const STORAGE_POS = "pa_overlay_pos";
   const STORAGE_COLLAPSED = "pa_overlay_collapsed";
+  const STORAGE_OPACITY = "pa_overlay_opacity";
 
   const host = document.createElement("div");
   host.id = HOST_ID;
@@ -60,6 +61,20 @@
       font-size: 12px; border-radius: 3px; line-height: 1;
     }
     .btn:hover { background: rgba(255,255,255,0.06); color: #e6edf3; }
+    .opacity-bar {
+      display: flex; align-items: center; gap: 6px; padding: 4px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .wrap.collapsed .opacity-bar { display: none; }
+    .opacity-bar label { font-size: 9px; color: #8b98a5; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+    .opacity-bar input[type="range"] {
+      -webkit-appearance: none; appearance: none; flex: 1; height: 3px;
+      background: rgba(255,255,255,0.12); border-radius: 2px; outline: none; cursor: pointer;
+    }
+    .opacity-bar input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%;
+      background: #4ade80; cursor: pointer;
+    }
     .body { padding: 8px 10px 10px; }
     .section { margin-bottom: 8px; }
     .section:last-child { margin-bottom: 0; }
@@ -87,6 +102,10 @@
       <div class="title">Today</div>
       <button class="btn" id="toggle" title="Collapse / expand">—</button>
       <button class="btn" id="close" title="Hide for this session">×</button>
+    </div>
+    <div class="opacity-bar">
+      <label>Opacity</label>
+      <input type="range" id="opacity-slider" min="10" max="100" value="92" />
     </div>
     <div class="body" id="body">
       <div class="section">
@@ -166,7 +185,9 @@
 
   // ---- Position persistence + drag ----
   const head = shadow.getElementById("head");
-  safeStorageGet([STORAGE_POS, STORAGE_COLLAPSED]).then((v) => {
+  const opacitySlider = shadow.getElementById("opacity-slider");
+
+  safeStorageGet([STORAGE_POS, STORAGE_COLLAPSED, STORAGE_OPACITY]).then((v) => {
     const pos = v[STORAGE_POS];
     if (pos && typeof pos.left === "number" && typeof pos.top === "number") {
       wrap.style.left = pos.left + "px";
@@ -174,6 +195,17 @@
       wrap.style.right = "auto";
     }
     if (v[STORAGE_COLLAPSED]) wrap.classList.add("collapsed");
+    const op = v[STORAGE_OPACITY];
+    if (op != null) {
+      opacitySlider.value = op;
+      wrap.style.opacity = (op / 100).toString();
+    }
+  });
+
+  opacitySlider.addEventListener("input", () => {
+    const val = parseInt(opacitySlider.value, 10);
+    wrap.style.opacity = (val / 100).toString();
+    safeStorageSet({ [STORAGE_OPACITY]: val });
   });
 
   let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
