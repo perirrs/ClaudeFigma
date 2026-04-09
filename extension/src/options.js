@@ -1,5 +1,5 @@
 const SYNC_SETTINGS_KEYS = ["memberName", "memberEmail", "recruiterName", "recruiterEmail", "syncEnabled", "syncUrl", "syncToken", "showOverlay"];
-const DEFAULT_SYNC_URL = "https://mats.base44.app/api/functions/syncActivity";
+const DEFAULT_SYNC_URL = "https://flow-metrics-31b50b1d.base44.app/api/functions/syncActivity";
 
 async function load() {
   let managed = {};

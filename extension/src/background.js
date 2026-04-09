@@ -15,11 +15,36 @@ let userIdle = false;
 // ---- Platform config (fetched from server, cached locally) ----
 // Default platforms used when server config hasn't been fetched yet.
 const DEFAULT_PLATFORMS = [
-  { id: "linkedin", name: "LinkedIn", color: "#4ade80", domains: ["linkedin.com"], metrics: ["profiles", "connections", "messages", "searches"] },
-  { id: "naukri", name: "Naukri", color: "#60a5fa", domains: ["naukri.com"], metrics: ["profiles", "downloads", "contacts", "searches"] },
+  { id: "linkedin", name: "LinkedIn", shortCode: "LI", color: "#4ade80", domains: ["linkedin.com"], metrics: ["profiles", "connections", "messages", "searches"] },
+  { id: "naukri", name: "Naukri", shortCode: "NK", color: "#60a5fa", domains: ["naukri.com"], metrics: ["profiles", "downloads", "contacts", "searches"] },
 ];
 
 let platformConfig = null; // array of platform objects
+
+// Converts getConfig server response platform to our internal format.
+// Server sends: { name, shortCode, domains, color, trackProfileViews, trackConnections, ... }
+// We need:      { id, name, shortCode, color, domains, metrics: ["profiles","connections",...] }
+function normalizePlatform(p) {
+  const metrics = [];
+  if (p.metrics) return { ...p, id: p.id || (p.shortCode || p.name || "").toLowerCase().replace(/\s+/g, "_") };
+  if (p.trackProfileViews) metrics.push("profiles");
+  if (p.trackConnections) metrics.push("connections");
+  if (p.trackMessages) metrics.push("messages");
+  if (p.trackCvDownloads) metrics.push("downloads");
+  if (p.trackContacts) metrics.push("contacts");
+  if (p.trackSearches) metrics.push("searches");
+  return {
+    id: (p.shortCode || p.name || "").toLowerCase().replace(/\s+/g, "_"),
+    name: p.name || "",
+    shortCode: p.shortCode || "",
+    color: p.color || "#8b98a5",
+    domains: p.domains || [],
+    metrics,
+    profileUrlPattern: p.profileUrlPattern || null,
+    profileNameSelector: p.profileNameSelector || null,
+    profileTitleSelector: p.profileTitleSelector || null,
+  };
+}
 
 // Maps a domain to a platform ID based on config.
 function platformForDomain(domain) {
@@ -38,21 +63,19 @@ function platformForSource(source) {
   if (!source || !platformConfig) return null;
   for (const p of platformConfig) {
     if (p.id === source) return p.id;
-    // Also match by name (case insensitive)
-    if (p.name && p.name.toLowerCase().replace(/\s+/g, "") === source.toLowerCase().replace(/\s+/g, "")) return p.id;
+    if (p.name && p.name.toLowerCase() === source.toLowerCase()) return p.id;
+    if (p.shortCode && p.shortCode.toLowerCase() === source.toLowerCase()) return p.id;
   }
   return null;
 }
 
 async function loadPlatformConfig() {
-  // Try cached config first.
   const cached = await chrome.storage.local.get(["pa_platform_config", "pa_config_fetched_at"]);
   if (cached.pa_platform_config && Array.isArray(cached.pa_platform_config) && cached.pa_platform_config.length > 0) {
     platformConfig = cached.pa_platform_config;
   } else {
     platformConfig = DEFAULT_PLATFORMS;
   }
-
   // Fetch fresh config from server in background.
   fetchServerConfig();
 }
@@ -62,7 +85,7 @@ async function fetchServerConfig() {
   if (!cfg.syncUrl || !cfg.memberEmail) return;
 
   const configUrl = cfg.syncUrl.replace(/\/syncActivity\b/, "/getConfig");
-  if (configUrl === cfg.syncUrl) return; // no getConfig endpoint available
+  if (configUrl === cfg.syncUrl) return;
 
   const headers = { "Content-Type": "application/json" };
   if (cfg.syncToken) {
@@ -79,18 +102,15 @@ async function fetchServerConfig() {
     if (!res.ok) return;
     const data = await res.json();
     if (data && data.platforms && Array.isArray(data.platforms) && data.platforms.length > 0) {
-      platformConfig = data.platforms.map(p => ({
-        id: (p.id || p.name || "").toLowerCase().replace(/\s+/g, "_"),
-        name: p.name || p.id,
-        color: p.color || "#8b98a5",
-        domains: p.domains || p.domainPatterns || [],
-        metrics: p.metrics || [],
-      }));
+      platformConfig = data.platforms.map(normalizePlatform);
+      // department from server is { name, color } object
+      const deptName = data.department ? (typeof data.department === "string" ? data.department : data.department.name) : null;
+      const deptColor = data.department && typeof data.department === "object" ? data.department.color : null;
       await chrome.storage.local.set({
         pa_platform_config: platformConfig,
         pa_config_fetched_at: Date.now(),
-        pa_member_info: data.member || null,
-        pa_department: data.department || null,
+        pa_department: deptName,
+        pa_department_color: deptColor,
       });
     }
   } catch {
@@ -117,19 +137,17 @@ function emptyDay(date) {
     activeMs: 0, idleMs: 0,
     // Generic per-platform time: { "linkedin": 12345, "naukri": 5000, ... }
     platformMs: {},
-    // Legacy fields kept for backward compat with existing content scripts
+    // Legacy fields kept for backward compat
     linkedinMs: 0, naukriMs: 0,
-    // Generic profile arrays per platform: { "linkedin": [...urls], "naukri": [...urls] }
+    // Generic profile arrays per platform
     platformProfiles: {},
-    // Legacy arrays
     liProfiles: [], nkProfiles: [],
-    // Generic metric counters: { "linkedin": { connections: 3, messages: 5 }, ... }
+    // Generic metric counters per platform
     platformMetrics: {},
-    // Legacy counters
     liConnections: 0, liMessages: 0, liSearches: 0,
     naukriDownloads: 0, naukriContacts: 0, naukriSearches: 0,
-    domains: {},      // { "linkedin.com": 12345, ... }
-    events: [],       // detailed event log for the dashboard
+    domains: {},
+    events: [],
   };
 }
 
@@ -138,7 +156,6 @@ async function loadToday() {
   const stored = await chrome.storage.local.get(`day_${key}`);
   if (stored[`day_${key}`] && stored[`day_${key}`].date === key) {
     today = stored[`day_${key}`];
-    // Ensure fields added in newer versions exist.
     if (!today.domains) today.domains = {};
     if (!today.events) today.events = [];
     if (!today.liSearches) today.liSearches = 0;
@@ -157,7 +174,6 @@ async function saveToday() {
   if (!today) return;
   const key = todayKey();
   if (today.date !== key) today = emptyDay(key);
-  // Cap events list so storage doesn't bloat.
   if (today.events.length > 2000) today.events = today.events.slice(-2000);
   await chrome.storage.local.set({ [`day_${key}`]: today });
 }
@@ -174,12 +190,10 @@ function bufferDwell() {
   today.activeMs += ms;
   if (domain) {
     today.domains[domain] = (today.domains[domain] || 0) + ms;
-    // Track per-platform time
     const pid = platformForDomain(domain);
     if (pid) {
       today.platformMs[pid] = (today.platformMs[pid] || 0) + ms;
     }
-    // Legacy fields (keep synced for backward compat)
     if (/linkedin\.com$/i.test(domain)) today.linkedinMs += ms;
     if (/naukri\.com$/i.test(domain)) today.naukriMs += ms;
   }
@@ -193,76 +207,47 @@ function handleEvent(ev) {
 
   const pid = platformForSource(ev.source) || ev.source;
 
-  // Initialize platform metrics if needed
-  if (pid && !today.platformMetrics[pid]) {
-    today.platformMetrics[pid] = {};
-  }
+  if (pid && !today.platformMetrics[pid]) today.platformMetrics[pid] = {};
+  if (pid && !today.platformProfiles[pid]) today.platformProfiles[pid] = [];
 
   if (ev.source === "linkedin" || pid === "linkedin") {
+    const pm = (today.platformMetrics["linkedin"] = today.platformMetrics["linkedin"] || {});
     if (ev.type === "profile_viewed" && ev.profile_url) {
       if (!today.liProfiles.includes(ev.profile_url)) today.liProfiles.push(ev.profile_url);
       if (!today.platformProfiles["linkedin"]) today.platformProfiles["linkedin"] = [];
       if (!today.platformProfiles["linkedin"].includes(ev.profile_url)) today.platformProfiles["linkedin"].push(ev.profile_url);
-      today.platformMetrics["linkedin"] = today.platformMetrics["linkedin"] || {};
-      today.platformMetrics["linkedin"].profiles = (today.platformProfiles["linkedin"] || []).length;
+      pm.profiles = today.platformProfiles["linkedin"].length;
     }
-    if (ev.type === "connection_sent") {
-      today.liConnections += 1;
-      today.platformMetrics["linkedin"] = today.platformMetrics["linkedin"] || {};
-      today.platformMetrics["linkedin"].connections = today.liConnections;
-    }
-    if (ev.type === "message_sent") {
-      today.liMessages += 1;
-      today.platformMetrics["linkedin"] = today.platformMetrics["linkedin"] || {};
-      today.platformMetrics["linkedin"].messages = today.liMessages;
-    }
-    if (ev.type === "search_ran") {
-      today.liSearches += 1;
-      today.platformMetrics["linkedin"] = today.platformMetrics["linkedin"] || {};
-      today.platformMetrics["linkedin"].searches = today.liSearches;
-    }
+    if (ev.type === "connection_sent") { today.liConnections += 1; pm.connections = today.liConnections; }
+    if (ev.type === "message_sent") { today.liMessages += 1; pm.messages = today.liMessages; }
+    if (ev.type === "search_ran") { today.liSearches += 1; pm.searches = today.liSearches; }
   } else if (ev.source === "naukri" || pid === "naukri") {
+    const pm = (today.platformMetrics["naukri"] = today.platformMetrics["naukri"] || {});
     if (ev.type === "profile_viewed" && ev.profile_url) {
       if (!today.nkProfiles.includes(ev.profile_url)) today.nkProfiles.push(ev.profile_url);
       if (!today.platformProfiles["naukri"]) today.platformProfiles["naukri"] = [];
       if (!today.platformProfiles["naukri"].includes(ev.profile_url)) today.platformProfiles["naukri"].push(ev.profile_url);
-      today.platformMetrics["naukri"] = today.platformMetrics["naukri"] || {};
-      today.platformMetrics["naukri"].profiles = (today.platformProfiles["naukri"] || []).length;
+      pm.profiles = today.platformProfiles["naukri"].length;
     }
-    if (ev.type === "cv_downloaded") {
-      today.naukriDownloads += 1;
-      today.platformMetrics["naukri"] = today.platformMetrics["naukri"] || {};
-      today.platformMetrics["naukri"].downloads = today.naukriDownloads;
-    }
-    if (ev.type === "contact_viewed") {
-      today.naukriContacts += 1;
-      today.platformMetrics["naukri"] = today.platformMetrics["naukri"] || {};
-      today.platformMetrics["naukri"].contacts = today.naukriContacts;
-    }
-    if (ev.type === "search_ran") {
-      today.naukriSearches += 1;
-      today.platformMetrics["naukri"] = today.platformMetrics["naukri"] || {};
-      today.platformMetrics["naukri"].searches = today.naukriSearches;
-    }
+    if (ev.type === "cv_downloaded") { today.naukriDownloads += 1; pm.downloads = today.naukriDownloads; }
+    if (ev.type === "contact_viewed") { today.naukriContacts += 1; pm.contacts = today.naukriContacts; }
+    if (ev.type === "search_ran") { today.naukriSearches += 1; pm.searches = today.naukriSearches; }
   } else if (pid) {
-    // Generic platform event handling for future content scripts
+    const pm = today.platformMetrics[pid];
     if (ev.type === "profile_viewed" && ev.profile_url) {
-      if (!today.platformProfiles[pid]) today.platformProfiles[pid] = [];
       if (!today.platformProfiles[pid].includes(ev.profile_url)) today.platformProfiles[pid].push(ev.profile_url);
-      today.platformMetrics[pid].profiles = today.platformProfiles[pid].length;
+      pm.profiles = today.platformProfiles[pid].length;
     }
-    // Generic metric increment
-    const metricName = ev.type.replace(/_/g, "").replace("sent", "s").replace("viewed", "s").replace("downloaded", "s").replace("ran", "s");
-    if (ev.type !== "profile_viewed") {
-      today.platformMetrics[pid][metricName] = (today.platformMetrics[pid][metricName] || 0) + 1;
-    }
+    if (ev.type === "connection_sent") pm.connections = (pm.connections || 0) + 1;
+    if (ev.type === "message_sent") pm.messages = (pm.messages || 0) + 1;
+    if (ev.type === "cv_downloaded") pm.downloads = (pm.downloads || 0) + 1;
+    if (ev.type === "contact_viewed") pm.contacts = (pm.contacts || 0) + 1;
+    if (ev.type === "search_ran") pm.searches = (pm.searches || 0) + 1;
   }
 }
 
 function snapshotForOverlay() {
   if (!today || today.date !== todayKey()) today = emptyDay(todayKey());
-
-  // Build platform summaries for the overlay
   const platforms = {};
   if (platformConfig) {
     for (const p of platformConfig) {
@@ -275,25 +260,14 @@ function snapshotForOverlay() {
       };
     }
   }
-
   return {
     date: today.date,
     activeMs: today.activeMs,
-    // Legacy fields for backward compat
-    linkedinMs: today.linkedinMs,
-    naukriMs: today.naukriMs,
-    liUniqueProfiles: today.liProfiles.length,
-    nkUniqueProfiles: today.nkProfiles.length,
-    liConnections: today.liConnections,
-    liMessages: today.liMessages,
-    liSearches: today.liSearches,
-    nkDownloads: today.naukriDownloads,
-    naukriContacts: today.naukriContacts,
-    naukriSearches: today.naukriSearches,
-    // New generic platform data
-    platformMs: today.platformMs,
-    platformMetrics: today.platformMetrics,
-    platforms,
+    linkedinMs: today.linkedinMs, naukriMs: today.naukriMs,
+    liUniqueProfiles: today.liProfiles.length, nkUniqueProfiles: today.nkProfiles.length,
+    liConnections: today.liConnections, liMessages: today.liMessages, liSearches: today.liSearches,
+    nkDownloads: today.naukriDownloads, naukriContacts: today.naukriContacts, naukriSearches: today.naukriSearches,
+    platformMs: today.platformMs, platformMetrics: today.platformMetrics, platforms,
     platformConfig: platformConfig || DEFAULT_PLATFORMS,
     showOverlay: true,
   };
@@ -327,10 +301,7 @@ chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
 
 chrome.windows.onFocusChanged.addListener(async (winId) => {
   if (winId === chrome.windows.WINDOW_ID_NONE) {
-    bufferDwell();
-    activeTabId = null;
-    activeUrl = null;
-    return;
+    bufferDwell(); activeTabId = null; activeUrl = null; return;
   }
   const [tab] = await chrome.tabs.query({ active: true, windowId: winId });
   if (tab) switchFocus(tab.id);
@@ -340,14 +311,8 @@ chrome.windows.onFocusChanged.addListener(async (winId) => {
 
 chrome.idle.setDetectionInterval(IDLE_THRESHOLD_SEC);
 chrome.idle.onStateChanged.addListener((state) => {
-  if (state === "active") {
-    userIdle = false;
-    activeStart = now();
-  } else {
-    bufferDwell();
-    userIdle = true;
-    if (today) today.idleMs += IDLE_THRESHOLD_SEC * 1000;
-  }
+  if (state === "active") { userIdle = false; activeStart = now(); }
+  else { bufferDwell(); userIdle = true; if (today) today.idleMs += IDLE_THRESHOLD_SEC * 1000; }
 });
 
 // ---- Messages from content scripts ----
@@ -372,7 +337,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           live.platformMs[pid] = (live.platformMs[pid] || 0) + extra;
           if (live.platforms[pid]) live.platforms[pid].timeMs += extra;
         }
-        // Legacy
         if (/linkedin\.com$/i.test(domain)) live.linkedinMs += extra;
         if (/naukri\.com$/i.test(domain)) live.naukriMs += extra;
       }
@@ -385,7 +349,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return;
   }
   if (msg.type === "pa-get-day") {
-    // Dashboard requests a specific day's data.
     const dateKey = msg.date || todayKey();
     if (today && today.date === dateKey) {
       sendResponse(today);
@@ -393,39 +356,29 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       chrome.storage.local.get(`day_${dateKey}`).then((stored) => {
         sendResponse(stored[`day_${dateKey}`] || emptyDay(dateKey));
       });
-      return true; // async response
+      return true;
     }
     return;
   }
   if (msg.type === "pa-get-days-list") {
-    // Return list of dates that have data.
     chrome.storage.local.get(null).then((all) => {
-      const days = Object.keys(all)
-        .filter((k) => k.startsWith("day_"))
-        .map((k) => k.replace("day_", ""))
-        .sort()
-        .reverse();
+      const days = Object.keys(all).filter(k => k.startsWith("day_")).map(k => k.replace("day_", "")).sort().reverse();
       sendResponse(days);
     });
     return true;
   }
   if (msg.type === "pa-get-range") {
-    // Aggregate multiple days for weekly/monthly/all-time summaries.
     chrome.storage.local.get(null).then((all) => {
       const dates = msg.dates || [];
       const agg = {
         activeMs: 0, idleMs: 0, linkedinMs: 0, naukriMs: 0,
-        platformMs: {},
-        platformProfiles: {},
-        platformMetrics: {},
+        platformMs: {}, platformProfiles: {}, platformMetrics: {},
         liProfiles: [], nkProfiles: [],
         liConnections: 0, liMessages: 0, liSearches: 0,
         naukriDownloads: 0, naukriContacts: 0, naukriSearches: 0,
         domains: {}, events: [], dayCount: 0,
       };
-      const liProfileSet = new Set();
-      const nkProfileSet = new Set();
-      const platformProfileSets = {};
+      const liSet = new Set(), nkSet = new Set(), ppSets = {};
 
       for (const date of dates) {
         const day = date === (today && today.date) ? today : all[`day_${date}`];
@@ -441,34 +394,22 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         agg.naukriDownloads += day.naukriDownloads || 0;
         agg.naukriContacts += day.naukriContacts || 0;
         agg.naukriSearches += day.naukriSearches || 0;
-        for (const u of (day.liProfiles || [])) liProfileSet.add(u);
-        for (const u of (day.nkProfiles || [])) nkProfileSet.add(u);
-        // Aggregate platform data
-        for (const [pid, ms] of Object.entries(day.platformMs || {})) {
-          agg.platformMs[pid] = (agg.platformMs[pid] || 0) + ms;
-        }
+        for (const u of (day.liProfiles || [])) liSet.add(u);
+        for (const u of (day.nkProfiles || [])) nkSet.add(u);
+        for (const [pid, ms] of Object.entries(day.platformMs || {})) agg.platformMs[pid] = (agg.platformMs[pid] || 0) + ms;
         for (const [pid, profiles] of Object.entries(day.platformProfiles || {})) {
-          if (!platformProfileSets[pid]) platformProfileSets[pid] = new Set();
-          for (const u of profiles) platformProfileSets[pid].add(u);
+          if (!ppSets[pid]) ppSets[pid] = new Set();
+          for (const u of profiles) ppSets[pid].add(u);
         }
         for (const [pid, metrics] of Object.entries(day.platformMetrics || {})) {
           if (!agg.platformMetrics[pid]) agg.platformMetrics[pid] = {};
-          for (const [k, v] of Object.entries(metrics)) {
-            agg.platformMetrics[pid][k] = (agg.platformMetrics[pid][k] || 0) + (v || 0);
-          }
+          for (const [k, v] of Object.entries(metrics)) agg.platformMetrics[pid][k] = (agg.platformMetrics[pid][k] || 0) + (v || 0);
         }
-        for (const [d, ms] of Object.entries(day.domains || {})) {
-          agg.domains[d] = (agg.domains[d] || 0) + ms;
-        }
-        for (const ev of (day.events || []).slice(-500)) {
-          agg.events.push(ev);
-        }
+        for (const [d, ms] of Object.entries(day.domains || {})) agg.domains[d] = (agg.domains[d] || 0) + ms;
+        for (const ev of (day.events || []).slice(-500)) agg.events.push(ev);
       }
-      agg.liProfiles = [...liProfileSet];
-      agg.nkProfiles = [...nkProfileSet];
-      for (const [pid, set] of Object.entries(platformProfileSets)) {
-        agg.platformProfiles[pid] = [...set];
-      }
+      agg.liProfiles = [...liSet]; agg.nkProfiles = [...nkSet];
+      for (const [pid, set] of Object.entries(ppSets)) agg.platformProfiles[pid] = [...set];
       if (agg.events.length > 1000) agg.events = agg.events.slice(-1000);
       agg.platformConfig = platformConfig || DEFAULT_PLATFORMS;
       sendResponse(agg);
@@ -496,29 +437,18 @@ chrome.alarms.create("pa-sync", { periodInMinutes: 5 });
 chrome.alarms.create("pa-config-refresh", { periodInMinutes: 60 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === "pa-save") {
-    bufferDwell();
-    await saveToday();
-  }
-  if (alarm.name === "pa-sync") {
-    bufferDwell();
-    await saveToday();
-    await syncToServer();
-  }
-  if (alarm.name === "pa-config-refresh") {
-    await fetchServerConfig();
-  }
+  if (alarm.name === "pa-save") { bufferDwell(); await saveToday(); }
+  if (alarm.name === "pa-sync") { bufferDwell(); await saveToday(); await syncToServer(); }
+  if (alarm.name === "pa-config-refresh") { await fetchServerConfig(); }
 });
 
 // ---- Team sync ----
-const DEFAULT_SYNC_URL = "https://mats.base44.app/api/functions/syncActivity";
+const DEFAULT_SYNC_URL = "https://flow-metrics-31b50b1d.base44.app/api/functions/syncActivity";
 
 async function getSyncConfig() {
   let managed = {};
   try { managed = await chrome.storage.managed.get(null); } catch {}
-  const user = await chrome.storage.sync.get(["syncEnabled", "syncUrl", "syncToken", "memberName", "memberEmail",
-    // Legacy field names
-    "recruiterName", "recruiterEmail"]);
+  const user = await chrome.storage.sync.get(["syncEnabled", "syncUrl", "syncToken", "memberName", "memberEmail", "recruiterName", "recruiterEmail"]);
   return {
     syncEnabled: managed.syncEnabled ?? user.syncEnabled,
     syncUrl: managed.syncUrl || user.syncUrl || DEFAULT_SYNC_URL,
@@ -526,6 +456,13 @@ async function getSyncConfig() {
     memberName: user.memberName || user.recruiterName,
     memberEmail: user.memberEmail || user.recruiterEmail,
   };
+}
+
+// Helper: get the display name for a platform ID (for sync payload).
+function platformDisplayName(pid) {
+  if (!platformConfig) return pid;
+  const p = platformConfig.find(x => x.id === pid);
+  return p ? p.name : pid;
 }
 
 async function syncToServer() {
@@ -556,22 +493,41 @@ async function syncToServer() {
 
     const events = day.events || [];
 
-    // Build drill-down arrays from events, grouped by platform
-    const profilesByPlatform = {};
-    const connectionsList = [];
-    const messagesList = [];
-    const downloadsList = [];
-    const contactsList = [];
+    // ---- Build drill-down arrays matching Base44 syncActivity schema ----
+
+    // platformTimes: array of { platform, ms }
+    const platformTimes = Object.entries(day.platformMs || {}).map(([pid, ms]) => ({
+      platform: platformDisplayName(pid),
+      platformId: pid,
+      ms,
+    }));
+
+    // allDomains: array of { domain, ms }
+    const allDomains = Object.entries(day.domains || {})
+      .sort((a, b) => b[1] - a[1])
+      .map(([domain, ms]) => ({ domain, ms }));
+
+    // profilesViewed: flat array across all platforms
+    const profileMaps = {};
+    const connectionsSent = [];
+    const messagesSent = [];
+    const cvDownloads = [];
+    const contactsViewed = [];
+    const searchesRun = [];
 
     for (const e of events) {
       const pid = platformForSource(e.source) || e.source;
+      const pName = platformDisplayName(pid);
+
       if (e.type === "profile_viewed" && e.profile_url) {
-        if (!profilesByPlatform[pid]) profilesByPlatform[pid] = new Map();
-        const map = profilesByPlatform[pid];
-        const prev = map.get(e.profile_url);
-        if (!prev) {
-          map.set(e.profile_url, { url: e.profile_url, name: e.profile_name || "", title: e.profile_title || "", views: 1, firstSeen: e.ts || e._ts, lastSeen: e.ts || e._ts });
+        if (!profileMaps[e.profile_url]) {
+          profileMaps[e.profile_url] = {
+            platform: pName, platformId: pid,
+            url: e.profile_url, name: e.profile_name || "", title: e.profile_title || "",
+            views: 1, firstSeen: e.ts || e._ts, lastSeen: e.ts || e._ts,
+          };
         } else {
+          const prev = profileMaps[e.profile_url];
           prev.views++;
           if (e.profile_name) prev.name = e.profile_name;
           if (e.profile_title) prev.title = e.profile_title;
@@ -579,27 +535,25 @@ async function syncToServer() {
         }
       }
       if (e.type === "connection_sent") {
-        connectionsList.push({ platform: pid, name: e.profile_name || "", title: e.profile_title || "", url: e.profile_url || "", ts: e.ts || e._ts });
+        connectionsSent.push({ platform: pName, platformId: pid, name: e.profile_name || "", title: e.profile_title || "", url: e.profile_url || "", ts: e.ts || e._ts });
       }
       if (e.type === "message_sent") {
-        messagesList.push({ platform: pid, name: e.profile_name || "", url: e.profile_url || "", ts: e.ts || e._ts });
+        messagesSent.push({ platform: pName, platformId: pid, name: e.profile_name || "", url: e.profile_url || "", ts: e.ts || e._ts });
       }
       if (e.type === "cv_downloaded") {
-        downloadsList.push({ platform: pid, name: e.profile_name || "", title: e.profile_title || "", url: e.profile_url || "", ts: e.ts || e._ts });
+        cvDownloads.push({ platform: pName, platformId: pid, name: e.profile_name || "", title: e.profile_title || "", url: e.profile_url || "", ts: e.ts || e._ts });
       }
       if (e.type === "contact_viewed") {
-        contactsList.push({ platform: pid, name: e.profile_name || "", url: e.profile_url || "", ts: e.ts || e._ts });
+        contactsViewed.push({ platform: pName, platformId: pid, name: e.profile_name || "", url: e.profile_url || "", ts: e.ts || e._ts });
+      }
+      if (e.type === "search_ran") {
+        searchesRun.push({ platform: pName, platformId: pid, keywords: (e.meta && e.meta.keywords) || "", url: (e.meta && e.meta.url) || "", ts: e.ts || e._ts });
       }
     }
 
-    // Flatten profile maps
-    const profilesDrillDown = {};
-    for (const [pid, map] of Object.entries(profilesByPlatform)) {
-      profilesDrillDown[pid] = [...map.values()];
-    }
+    const profilesViewed = Object.values(profileMaps);
 
-    const allDomains = Object.entries(day.domains || {}).sort((a, b) => b[1] - a[1]).map(([d, ms]) => ({ domain: d, ms }));
-
+    // eventTimeline: last 500 events
     const eventTimeline = events.slice(-500).map(e => ({
       ts: e.ts || e._ts,
       source: e.source || "",
@@ -609,63 +563,33 @@ async function syncToServer() {
       profileUrl: e.profile_url || "",
     }));
 
-    // New format: generic platform data
+    // Payload matching Base44 syncActivity endpoint exactly
     const payload = {
       memberName: cfg.memberName,
       memberEmail: cfg.memberEmail || "",
-      // Legacy fields for backward compat
-      recruiterName: cfg.memberName,
-      recruiterEmail: cfg.memberEmail || "",
       date: day.date,
       activeMs: day.activeMs || 0,
       idleMs: day.idleMs || 0,
-      // Per-platform time in ms
-      platformTimes: day.platformMs || {},
-      // Per-platform metrics
-      platformMetrics: day.platformMetrics || {},
-      // Per-platform profile counts
-      platformProfileCounts: {},
-      // Legacy flat fields (for old Base44 app compat)
-      linkedinMs: day.linkedinMs || 0,
-      naukriMs: day.naukriMs || 0,
-      liProfilesCount: (day.liProfiles || []).length,
-      nkProfilesCount: (day.nkProfiles || []).length,
-      liConnections: day.liConnections || 0,
-      liMessages: day.liMessages || 0,
-      liSearches: day.liSearches || 0,
-      naukriDownloads: day.naukriDownloads || 0,
-      naukriContacts: day.naukriContacts || 0,
-      naukriSearches: day.naukriSearches || 0,
-      // Drill-down detail data
+      platformTimes,
       allDomains,
-      profilesDrillDown,
-      connectionsList,
-      messagesList,
-      downloadsList,
-      contactsList,
-      // Legacy drill-down names
-      liProfiles: profilesDrillDown["linkedin"] || [],
-      liConnectionsList: connectionsList.filter(c => c.platform === "linkedin"),
-      liMessagesList: messagesList.filter(m => m.platform === "linkedin"),
-      nkProfiles: profilesDrillDown["naukri"] || [],
-      nkDownloadsList: downloadsList.filter(d => d.platform === "naukri"),
-      nkContactsList: contactsList.filter(c => c.platform === "naukri"),
+      profilesViewed,
+      connectionsSent,
+      messagesSent,
+      cvDownloads,
+      contactsViewed,
+      searchesRun,
       eventTimeline,
       extensionVersion: chrome.runtime.getManifest().version,
       syncedAt: new Date().toISOString(),
     };
-
-    // Fill platformProfileCounts
-    for (const [pid, profiles] of Object.entries(day.platformProfiles || {})) {
-      payload.platformProfileCounts[pid] = profiles.length;
-    }
 
     try {
       const res = await fetch(cfg.syncUrl, { method: "POST", headers, body: JSON.stringify(payload) });
       if (res.ok) {
         synced++;
       } else {
-        lastError = `HTTP ${res.status}`;
+        const errBody = await res.text().catch(() => "");
+        lastError = `HTTP ${res.status}: ${errBody.slice(0, 200)}`;
       }
     } catch (e) {
       lastError = e.message;
