@@ -1,0 +1,134 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Productivity Analyser — Dashboard</title>
+  <style>
+    :root { --bg: #0b1016; --bg2: #0f1620; --card: #121a25; --border: #1b2530; --text: #e6edf3; --muted: #8b98a5; --green: #4ade80; --blue: #60a5fa; --red: #f87171; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .subtitle { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
+
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .day-nav { display: flex; align-items: center; gap: 8px; }
+    .day-nav button { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size: 12px; }
+    .day-nav button:hover { border-color: var(--green); }
+    .day-nav input[type="date"] { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 6px 8px; font-size: 12px; color-scheme: dark; }
+    .export-btn { background: var(--green); color: #000; border: none; border-radius: 6px; padding: 8px 14px; font-weight: 600; font-size: 12px; cursor: pointer; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+    .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+    .kpi-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .kpi.green { border-color: rgba(74,222,128,0.2); }
+    .kpi.green .kpi-value { color: var(--green); }
+    .kpi.blue { border-color: rgba(96,165,250,0.2); }
+    .kpi.blue .kpi-value { color: var(--blue); }
+
+    .stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+    .stat-val { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .card h2 { font-size: 13px; margin: 0 0 12px; }
+    .card.full { grid-column: 1 / -1; }
+
+    .domain-row { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+    .domain-row:last-child { border-bottom: none; }
+    .domain-name { color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .domain-time { font-variant-numeric: tabular-nums; margin-left: 10px; }
+    .bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-top: 3px; }
+    .bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--green), var(--blue)); }
+
+    .profile-row { font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .profile-row:last-child { border-bottom: none; }
+    .profile-name { font-weight: 600; }
+    .profile-title { color: var(--muted); font-size: 11px; }
+    .profile-meta { color: var(--muted); font-size: 10px; margin-top: 2px; }
+
+    .event-row { font-size: 11px; padding: 4px 0; border-bottom: 1px solid rgba(27,37,48,0.5); display: flex; gap: 10px; }
+    .event-row:last-child { border-bottom: none; }
+    .event-time { color: var(--muted); min-width: 60px; font-variant-numeric: tabular-nums; }
+    .event-badge { font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+    .event-badge.li { background: rgba(74,222,128,0.12); color: var(--green); }
+    .event-badge.nk { background: rgba(96,165,250,0.12); color: var(--blue); }
+    .event-detail { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .empty { color: var(--muted); font-size: 12px; text-align: center; padding: 20px 0; }
+    .history-list { margin-top: 8px; }
+    .history-day { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .history-day:hover { color: var(--green); }
+
+    @media (max-width: 700px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+      .split { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Productivity Analyser</h1>
+    <div class="subtitle">All data stored locally in your browser — no server needed</div>
+
+    <div class="topbar">
+      <div class="day-nav">
+        <button id="prev-day">&larr; Prev</button>
+        <input type="date" id="date-picker" />
+        <button id="next-day">Next &rarr;</button>
+        <button id="today-btn">Today</button>
+      </div>
+      <button class="export-btn" id="export-csv">Export CSV</button>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Active time</div><div class="kpi-value" id="k-active">0m</div></div>
+      <div class="kpi"><div class="kpi-label">Idle time</div><div class="kpi-value" id="k-idle">0m</div></div>
+      <div class="kpi green"><div class="kpi-label">LinkedIn time</div><div class="kpi-value" id="k-li">0m</div></div>
+      <div class="kpi blue"><div class="kpi-label">Naukri time</div><div class="kpi-value" id="k-nk">0m</div></div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val" id="s-li-prof">0</div><div class="stat-label">LI Profiles</div></div>
+      <div class="stat-card"><div class="stat-val" id="s-li-conn">0</div><div class="stat-label">Connections</div></div>
+      <div class="stat-card"><div class="stat-val" id="s-li-msg">0</div><div class="stat-label">Messages</div></div>
+      <div class="stat-card"><div class="stat-val" id="s-nk-prof">0</div><div class="stat-label">NK Profiles</div></div>
+      <div class="stat-card"><div class="stat-val" id="s-nk-cv">0</div><div class="stat-label">CVs</div></div>
+      <div class="stat-card"><div class="stat-val" id="s-nk-contact">0</div><div class="stat-label">Contacts</div></div>
+    </div>
+
+    <div class="split">
+      <div class="card">
+        <h2>Top Domains</h2>
+        <div id="domains-list"><div class="empty">No data</div></div>
+      </div>
+      <div class="card">
+        <h2>History</h2>
+        <div id="history-list"><div class="empty">No data</div></div>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="card">
+        <h2>LinkedIn Profiles Viewed</h2>
+        <div id="li-profiles"><div class="empty">No profiles yet</div></div>
+      </div>
+      <div class="card">
+        <h2>Naukri Profiles Viewed</h2>
+        <div id="nk-profiles"><div class="empty">No profiles yet</div></div>
+      </div>
+    </div>
+
+    <div class="card full" style="margin-bottom: 16px;">
+      <h2>Event Log</h2>
+      <div id="event-log" style="max-height: 400px; overflow-y: auto;"><div class="empty">No events yet</div></div>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

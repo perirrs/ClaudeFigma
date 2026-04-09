@@ -3,26 +3,86 @@
   <head>
     <meta charset="utf-8" />
     <style>
-      body { font-family: -apple-system, system-ui, sans-serif; width: 280px; margin: 0; padding: 14px; background: #0b1016; color: #e6edf3; }
-      h1 { font-size: 13px; margin: 0 0 10px; color: #4ade80; }
-      .row { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #1b2530; }
-      .row:last-child { border-bottom: none; }
-      .muted { color: #8b98a5; }
-      .ok { color: #4ade80; }
-      .bad { color: #f87171; }
-      a { color: #4ade80; font-size: 12px; text-decoration: none; }
-      .actions { margin-top: 10px; display: flex; justify-content: space-between; }
+      body { font-family: -apple-system, system-ui, sans-serif; width: 320px; margin: 0; padding: 0; background: #0b1016; color: #e6edf3; }
+      .header { padding: 12px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1b2530; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 10px rgba(74,222,128,0.5); }
+      .brand { font-size: 13px; font-weight: 700; flex: 1; }
+      .header a { font-size: 11px; color: #4ade80; text-decoration: none; }
+      .header a:hover { text-decoration: underline; }
+
+      .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #1b2530; }
+      .kpi { background: #0b1016; padding: 10px 14px; }
+      .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #8b98a5; margin-bottom: 4px; }
+      .kpi-value { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .kpi.green .kpi-value { color: #4ade80; }
+      .kpi.blue .kpi-value { color: #60a5fa; }
+
+      .section { padding: 10px 14px; border-top: 1px solid #1b2530; }
+      .section-title { font-size: 11px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+      .section-title .tag { font-size: 9px; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+      .tag.li { background: rgba(74,222,128,0.12); color: #4ade80; }
+      .tag.nk { background: rgba(96,165,250,0.12); color: #60a5fa; }
+
+      .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+      .stat { text-align: center; }
+      .stat-val { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .stat-label { font-size: 9px; color: #8b98a5; text-transform: uppercase; letter-spacing: 0.05em; }
+
+      .domains { padding: 10px 14px; border-top: 1px solid #1b2530; }
+      .domains-title { font-size: 11px; font-weight: 600; margin-bottom: 6px; }
+      .domain-row { display: flex; justify-content: space-between; font-size: 11px; padding: 3px 0; }
+      .domain-row .name { color: #8b98a5; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .domain-row .time { font-variant-numeric: tabular-nums; margin-left: 10px; }
+
+      .footer { padding: 10px 14px; border-top: 1px solid #1b2530; display: flex; justify-content: space-between; }
+      .footer a { font-size: 11px; color: #4ade80; text-decoration: none; cursor: pointer; }
+      .footer a:hover { text-decoration: underline; }
+
+      .empty { color: #8b98a5; font-size: 11px; text-align: center; padding: 6px 0; }
     </style>
   </head>
   <body>
-    <h1>Productivity Analyser</h1>
-    <div class="row"><span class="muted">Cloud</span><span id="status" class="bad">Checking…</span></div>
-    <div class="row"><span class="muted">Host</span><span id="host">—</span></div>
-    <div class="row"><span class="muted">User</span><span id="user">—</span></div>
-    <div class="actions">
-      <a href="#" id="open-options">Settings</a>
-      <a href="#" id="open-dashboard">Open dashboard</a>
+    <div class="header">
+      <div class="dot"></div>
+      <div class="brand">Productivity Analyser</div>
+      <a href="#" id="open-dashboard">Full Dashboard</a>
     </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-label">Active time</div><div class="kpi-value" id="active">0m</div></div>
+      <div class="kpi"><div class="kpi-label">Idle time</div><div class="kpi-value" id="idle">0m</div></div>
+      <div class="kpi green"><div class="kpi-label">LinkedIn</div><div class="kpi-value" id="linkedin">0m</div></div>
+      <div class="kpi blue"><div class="kpi-label">Naukri</div><div class="kpi-value" id="naukri">0m</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="tag li">LinkedIn</span> Activity</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-val" id="li-profiles">0</div><div class="stat-label">Profiles</div></div>
+        <div class="stat"><div class="stat-val" id="li-conns">0</div><div class="stat-label">Connections</div></div>
+        <div class="stat"><div class="stat-val" id="li-msgs">0</div><div class="stat-label">Messages</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="tag nk">Naukri</span> Activity</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-val" id="nk-profiles">0</div><div class="stat-label">Profiles</div></div>
+        <div class="stat"><div class="stat-val" id="nk-cvs">0</div><div class="stat-label">CVs</div></div>
+        <div class="stat"><div class="stat-val" id="nk-contacts">0</div><div class="stat-label">Contacts</div></div>
+      </div>
+    </div>
+
+    <div class="domains" id="domains-section">
+      <div class="domains-title">Top Domains</div>
+      <div id="domains-list"><div class="empty">Browsing data will appear here</div></div>
+    </div>
+
+    <div class="footer">
+      <a id="export-csv">Export CSV</a>
+      <a id="open-settings">Settings</a>
+    </div>
+
     <script src="popup.js"></script>
   </body>
 </html>
