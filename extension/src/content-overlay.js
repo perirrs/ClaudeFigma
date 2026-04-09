@@ -1,10 +1,10 @@
 // Floating, draggable, translucent stats overlay. Injected on every page.
-// Polls the background worker every 3s for today's snapshot. Position is
-// persisted per-user in chrome.storage.local, visibility is controlled via
-// chrome.storage.sync ("showOverlay") and a per-tab local "paCollapsed".
+// Polls the background worker every 3s for today's snapshot. Dynamically
+// renders platform sections based on config fetched from the server.
+// Position is persisted per-user in chrome.storage.local, visibility is
+// controlled via chrome.storage.sync ("showOverlay") and a per-tab close.
 
 (function () {
-  // Don't inject into frames, chrome-internal pages, or PDFs.
   if (window.self !== window.top) return;
   if (!document.documentElement) return;
   if (document.getElementById("pa-overlay-root")) return;
@@ -29,10 +29,7 @@
     "pointer-events: auto !important;" +
     "visibility: visible !important;" +
     "opacity: 1 !important;";
-  // Force the host's critical layout properties with !important so no page
-  // CSS, React re-render, or LinkedIn stylesheet can hide / reposition it.
   host.setAttribute("style", HOST_STYLE);
-  // Isolate styles from the host page with a shadow DOM.
   const shadow = host.attachShadow({ mode: "open" });
 
   const style = document.createElement("style");
@@ -80,9 +77,6 @@
     .section:last-child { margin-bottom: 0; }
     .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
     .label { font-size: 11px; font-weight: 600; }
-    .label.all { color: #e6edf3; }
-    .label.li { color: #4ade80; }
-    .label.nk { color: #60a5fa; }
     .big { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .rows { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #8b98a5; }
     .row { display: flex; justify-content: space-between; align-items: baseline; }
@@ -100,8 +94,8 @@
     <div class="head" id="head">
       <div class="dot"></div>
       <div class="title">Today</div>
-      <button class="btn" id="toggle" title="Collapse / expand">—</button>
-      <button class="btn" id="close" title="Hide for this session">×</button>
+      <button class="btn" id="toggle" title="Collapse / expand">\u2014</button>
+      <button class="btn" id="close" title="Hide for this session">\u00d7</button>
     </div>
     <div class="opacity-bar">
       <label>Opacity</label>
@@ -110,38 +104,14 @@
     <div class="body" id="body">
       <div class="section">
         <div class="section-head">
-          <span class="label all">Browser</span>
+          <span class="label" style="color:#e6edf3">Browser</span>
           <span class="big" id="all-time">0m</span>
         </div>
       </div>
-      <div class="sep"></div>
-      <div class="section">
-        <div class="section-head">
-          <span class="label li">LinkedIn</span>
-          <span class="big" id="li-time">0m</span>
-        </div>
-        <div class="rows">
-          <div class="row"><span>Profiles viewed</span><b id="li-prof">0</b></div>
-          <div class="row"><span>Connections sent</span><b id="li-conn">0</b></div>
-          <div class="row"><span>Messages sent</span><b id="li-msg">0</b></div>
-        </div>
-      </div>
-      <div class="sep"></div>
-      <div class="section">
-        <div class="section-head">
-          <span class="label nk">Naukri</span>
-          <span class="big" id="nk-time">0m</span>
-        </div>
-        <div class="rows">
-          <div class="row"><span>Profiles viewed</span><b id="nk-prof">0</b></div>
-          <div class="row"><span>CVs downloaded</span><b id="nk-dl">0</b></div>
-        </div>
-      </div>
+      <div id="platform-sections"></div>
     </div>
   `;
   shadow.appendChild(wrap);
-  // Attach to <html> instead of <body> so LinkedIn's React root can't
-  // take our overlay with it when it re-renders body.
   document.documentElement.appendChild(host);
   try { console.log("[PA] overlay injected on", location.hostname); } catch {}
 
@@ -155,8 +125,6 @@
   });
   reattachObserver.observe(document.documentElement, { childList: true, subtree: false });
 
-  // If anything overwrites the host's style attribute (e.g. a stray
-  // host.style.display = "none" from an earlier version), restore it.
   const styleObserver = new MutationObserver(() => {
     if (closedManually) return;
     if (host.getAttribute("style") !== HOST_STYLE) {
@@ -259,23 +227,77 @@
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 
+  // Metric labels for display
+  const METRIC_LABELS = {
+    profiles: "Profiles viewed",
+    connections: "Connections sent",
+    messages: "Messages sent",
+    searches: "Searches",
+    downloads: "CVs downloaded",
+    contacts: "Contacts revealed",
+  };
+
+  let lastPlatformConfig = null;
+
+  function buildPlatformSections(platforms, platformConfig) {
+    const container = shadow.getElementById("platform-sections");
+    if (!container) return;
+
+    // Only rebuild DOM if config changed
+    const configKey = JSON.stringify((platformConfig || []).map(p => p.id));
+    if (configKey === lastPlatformConfig) return;
+    lastPlatformConfig = configKey;
+
+    container.innerHTML = "";
+
+    for (const p of (platformConfig || [])) {
+      const section = document.createElement("div");
+      section.innerHTML = `
+        <div class="sep"></div>
+        <div class="section">
+          <div class="section-head">
+            <span class="label" style="color:${p.color || '#8b98a5'}">${p.name}</span>
+            <span class="big" id="p-time-${p.id}">0m</span>
+          </div>
+          <div class="rows" id="p-metrics-${p.id}"></div>
+        </div>
+      `;
+      container.appendChild(section);
+    }
+  }
+
+  function updatePlatformData(snap) {
+    const platforms = snap.platforms || {};
+    const platformConfig = snap.platformConfig || [];
+
+    buildPlatformSections(platforms, platformConfig);
+
+    for (const p of platformConfig) {
+      const timeEl = shadow.getElementById(`p-time-${p.id}`);
+      const metricsEl = shadow.getElementById(`p-metrics-${p.id}`);
+      if (!timeEl || !metricsEl) continue;
+
+      const data = platforms[p.id] || {};
+      timeEl.textContent = fmt(data.timeMs || 0);
+
+      const metrics = data.metrics || {};
+      const rows = [];
+      for (const m of (p.metrics || [])) {
+        const label = METRIC_LABELS[m] || m;
+        const val = m === "profiles" ? (data.profileCount || 0) : (metrics[m] || 0);
+        rows.push(`<div class="row"><span>${label}</span><b>${val}</b></div>`);
+      }
+      metricsEl.innerHTML = rows.join("");
+    }
+  }
+
   async function refresh() {
     if (!extensionAlive()) { return; }
     try {
       const snap = await chrome.runtime.sendMessage({ type: "pa-get-stats" });
       if (!snap) return;
-      // NOTE: we intentionally ignore snap.showOverlay here. Earlier users
-      // saved it as false and the overlay became invisible on every load.
-      // To hide the overlay, use the × button (per-tab) or remove the
-      // content_script entry.
       shadow.getElementById("all-time").textContent = fmt(snap.activeMs);
-      shadow.getElementById("li-time").textContent = fmt(snap.linkedinMs);
-      shadow.getElementById("nk-time").textContent = fmt(snap.naukriMs);
-      shadow.getElementById("li-prof").textContent = snap.liUniqueProfiles;
-      shadow.getElementById("li-conn").textContent = snap.liConnections;
-      shadow.getElementById("li-msg").textContent = snap.liMessages;
-      shadow.getElementById("nk-prof").textContent = snap.nkUniqueProfiles;
-      shadow.getElementById("nk-dl").textContent = snap.nkDownloads;
+      updatePlatformData(snap);
     } catch {
       // extension reloaded / SW dead - next tick will reconnect
     }

@@ -4,20 +4,101 @@ function fmt(ms) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+const METRIC_LABELS = {
+  profiles: "Profiles",
+  connections: "Connections",
+  messages: "Messages",
+  searches: "Searches",
+  downloads: "CVs",
+  contacts: "Contacts",
+};
+
+let builtPlatforms = null;
+
+function buildPlatformUI(platformConfig) {
+  const key = JSON.stringify((platformConfig || []).map(p => p.id));
+  if (key === builtPlatforms) return;
+  builtPlatforms = key;
+
+  // Add platform time KPIs
+  const kpiGrid = document.getElementById("kpi-grid");
+  // Remove old platform KPIs (keep first 2: active + idle)
+  const existingKpis = kpiGrid.querySelectorAll(".kpi-platform");
+  existingKpis.forEach(el => el.remove());
+
+  for (const p of (platformConfig || [])) {
+    const kpi = document.createElement("div");
+    kpi.className = "kpi kpi-platform";
+    kpi.innerHTML = `<div class="kpi-label">${esc(p.name)}</div><div class="kpi-value" id="kpi-${p.id}" style="color:${p.color || '#e6edf3'}">0m</div>`;
+    kpiGrid.appendChild(kpi);
+  }
+
+  // Build platform activity sections
+  const container = document.getElementById("platform-sections");
+  container.innerHTML = "";
+
+  for (const p of (platformConfig || [])) {
+    const metrics = p.metrics || [];
+    if (metrics.length === 0) continue;
+
+    const section = document.createElement("div");
+    section.className = "section";
+    section.innerHTML = `
+      <div class="section-title">
+        <span class="tag" style="background:${hexToRgba(p.color, 0.12)};color:${p.color}">${esc(p.name)}</span> Activity
+      </div>
+      <div class="stats" id="stats-${p.id}" style="grid-template-columns: repeat(${Math.min(metrics.length, 3)}, 1fr);">
+        ${metrics.map(m => `
+          <div class="stat">
+            <div class="stat-val" id="stat-${p.id}-${m}">0</div>
+            <div class="stat-label">${METRIC_LABELS[m] || m}</div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+    container.appendChild(section);
+  }
+}
+
+function hexToRgba(hex, alpha) {
+  if (!hex) return `rgba(139,152,165,${alpha})`;
+  hex = hex.replace("#", "");
+  const r = parseInt(hex.substr(0, 2), 16) || 0;
+  const g = parseInt(hex.substr(2, 2), 16) || 0;
+  const b = parseInt(hex.substr(4, 2), 16) || 0;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function esc(s) {
+  if (!s) return "";
+  const el = document.createElement("span");
+  el.textContent = s;
+  return el.innerHTML;
+}
+
 async function refresh() {
   try {
     const snap = await chrome.runtime.sendMessage({ type: "pa-get-stats" });
     if (!snap) return;
+
+    const platformConfig = snap.platformConfig || [];
+    buildPlatformUI(platformConfig);
+
     document.getElementById("active").textContent = fmt(snap.activeMs);
     document.getElementById("idle").textContent = fmt(snap.idleMs || 0);
-    document.getElementById("linkedin").textContent = fmt(snap.linkedinMs);
-    document.getElementById("naukri").textContent = fmt(snap.naukriMs);
-    document.getElementById("li-profiles").textContent = snap.liUniqueProfiles || 0;
-    document.getElementById("li-conns").textContent = snap.liConnections || 0;
-    document.getElementById("li-msgs").textContent = snap.liMessages || 0;
-    document.getElementById("nk-profiles").textContent = snap.nkUniqueProfiles || 0;
-    document.getElementById("nk-cvs").textContent = snap.nkDownloads || 0;
-    document.getElementById("nk-contacts").textContent = snap.naukriContacts || 0;
+
+    // Update platform KPIs and stats
+    for (const p of platformConfig) {
+      const kpiEl = document.getElementById(`kpi-${p.id}`);
+      if (kpiEl) kpiEl.textContent = fmt((snap.platformMs || {})[p.id] || 0);
+
+      const pData = (snap.platforms || {})[p.id] || {};
+      const metrics = pData.metrics || {};
+      for (const m of (p.metrics || [])) {
+        const el = document.getElementById(`stat-${p.id}-${m}`);
+        if (el) el.textContent = m === "profiles" ? (pData.profileCount || 0) : (metrics[m] || 0);
+      }
+    }
   } catch {}
 
   // Load today's full data for domain breakdown.
@@ -32,7 +113,7 @@ async function refresh() {
         list.innerHTML = '<div class="empty">Browsing data will appear here</div>';
       } else {
         list.innerHTML = sorted.map(([d, ms]) =>
-          `<div class="domain-row"><span class="name">${d}</span><span class="time">${fmt(ms)}</span></div>`
+          `<div class="domain-row"><span class="name">${esc(d)}</span><span class="time">${fmt(ms)}</span></div>`
         ).join("");
       }
     }
@@ -41,7 +122,6 @@ async function refresh() {
 
 refresh();
 
-// Open the full dashboard page (bundled with the extension).
 document.getElementById("open-dashboard").addEventListener("click", (e) => {
   e.preventDefault();
   chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
@@ -62,16 +142,22 @@ document.getElementById("export-csv").addEventListener("click", async (e) => {
     lines.push(`date,${day.date}`);
     lines.push(`active_ms,${day.activeMs}`);
     lines.push(`idle_ms,${day.idleMs || 0}`);
-    lines.push(`linkedin_ms,${day.linkedinMs}`);
-    lines.push(`naukri_ms,${day.naukriMs}`);
-    lines.push(`linkedin_profiles_viewed,${(day.liProfiles || []).length}`);
-    lines.push(`linkedin_connections_sent,${day.liConnections}`);
-    lines.push(`linkedin_messages_sent,${day.liMessages}`);
-    lines.push(`linkedin_searches,${day.liSearches || 0}`);
-    lines.push(`naukri_profiles_viewed,${(day.nkProfiles || []).length}`);
-    lines.push(`naukri_cv_downloads,${day.naukriDownloads}`);
-    lines.push(`naukri_contacts_revealed,${day.naukriContacts || 0}`);
-    lines.push(`naukri_searches,${day.naukriSearches || 0}`);
+
+    // Platform times
+    for (const [pid, ms] of Object.entries(day.platformMs || {})) {
+      lines.push(`${pid}_ms,${ms}`);
+    }
+    // Legacy
+    lines.push(`linkedin_ms,${day.linkedinMs || 0}`);
+    lines.push(`naukri_ms,${day.naukriMs || 0}`);
+
+    // Platform metrics
+    for (const [pid, metrics] of Object.entries(day.platformMetrics || {})) {
+      for (const [k, v] of Object.entries(metrics)) {
+        lines.push(`${pid}_${k},${v}`);
+      }
+    }
+
     lines.push("");
     lines.push("domain,time_ms");
     for (const [d, ms] of Object.entries(day.domains || {}).sort((a, b) => b[1] - a[1])) {

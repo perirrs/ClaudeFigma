@@ -10,6 +10,7 @@
     .container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
     h1 { font-size: 20px; margin: 0 0 4px; }
     .subtitle { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
+    .dept-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 3px; background: rgba(74,222,128,0.1); color: var(--green); margin-left: 10px; vertical-align: middle; }
 
     .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
     .day-nav { display: flex; align-items: center; gap: 8px; }
@@ -18,16 +19,12 @@
     .day-nav input[type="date"] { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 6px 8px; font-size: 12px; color-scheme: dark; }
     .export-btn { background: var(--green); color: #000; border: none; border-radius: 6px; padding: 8px 14px; font-weight: 600; font-size: 12px; cursor: pointer; }
 
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
     .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
     .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
     .kpi-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .kpi.green { border-color: rgba(74,222,128,0.2); }
-    .kpi.green .kpi-value { color: var(--green); }
-    .kpi.blue { border-color: rgba(96,165,250,0.2); }
-    .kpi.blue .kpi-value { color: var(--blue); }
 
-    .stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; margin-bottom: 16px; }
     .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
     .stat-val { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
@@ -54,8 +51,6 @@
     .event-row:last-child { border-bottom: none; }
     .event-time { color: var(--muted); min-width: 60px; font-variant-numeric: tabular-nums; }
     .event-badge { font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
-    .event-badge.li { background: rgba(74,222,128,0.12); color: var(--green); }
-    .event-badge.nk { background: rgba(96,165,250,0.12); color: var(--blue); }
     .event-detail { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     .empty { color: var(--muted); font-size: 12px; text-align: center; padding: 20px 0; }
@@ -69,13 +64,10 @@
     .period-tab.active { border-color: var(--green); color: var(--green); background: rgba(74,222,128,0.06); }
     .summary-banner { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; }
     .summary-banner .period-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
-    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-    .summary-grid .sg-item { }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 16px; }
     .sg-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
     .sg-value { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .sg-value.green { color: var(--green); }
-    .sg-value.blue { color: var(--blue); }
-    .summary-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .summary-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
     .ss-item { text-align: center; }
     .ss-val { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .ss-label { font-size: 9px; color: var(--muted); text-transform: uppercase; }
@@ -91,7 +83,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Productivity Analyser</h1>
+    <h1>Productivity Analyser <span class="dept-badge" id="dept-badge" style="display:none"></span></h1>
     <div class="subtitle">All data stored locally in your browser — no server needed</div>
 
     <div class="topbar">
@@ -113,41 +105,16 @@
 
     <div id="summary-banner" class="summary-banner" style="display:none;">
       <div class="period-label" id="summary-label">This Week</div>
-      <div class="summary-grid">
-        <div class="sg-item"><div class="sg-label">Active time</div><div class="sg-value" id="sg-active">0m</div></div>
-        <div class="sg-item"><div class="sg-label">Idle time</div><div class="sg-value" id="sg-idle">0m</div></div>
-        <div class="sg-item"><div class="sg-label">LinkedIn</div><div class="sg-value green" id="sg-li">0m</div></div>
-        <div class="sg-item"><div class="sg-label">Naukri</div><div class="sg-value blue" id="sg-nk">0m</div></div>
-      </div>
-      <div class="summary-stats">
-        <div class="ss-item"><div class="ss-val" id="sg-li-prof">0</div><div class="ss-label">LI Profiles</div></div>
-        <div class="ss-item"><div class="ss-val" id="sg-li-conn">0</div><div class="ss-label">Connections</div></div>
-        <div class="ss-item"><div class="ss-val" id="sg-li-msg">0</div><div class="ss-label">Messages</div></div>
-        <div class="ss-item"><div class="ss-val" id="sg-nk-prof">0</div><div class="ss-label">NK Profiles</div></div>
-        <div class="ss-item"><div class="ss-val" id="sg-nk-cv">0</div><div class="ss-label">CVs</div></div>
-        <div class="ss-item"><div class="ss-val" id="sg-nk-contact">0</div><div class="ss-label">Contacts</div></div>
-      </div>
+      <div class="summary-grid" id="summary-kpis"></div>
+      <div class="summary-stats" id="summary-stats"></div>
       <div class="summary-domains">
         <h3>Top Domains (<span id="sg-days">0</span> days)</h3>
         <div id="sg-domains"><div class="empty">No data</div></div>
       </div>
     </div>
 
-    <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-label">Active time</div><div class="kpi-value" id="k-active">0m</div></div>
-      <div class="kpi"><div class="kpi-label">Idle time</div><div class="kpi-value" id="k-idle">0m</div></div>
-      <div class="kpi green"><div class="kpi-label">LinkedIn time</div><div class="kpi-value" id="k-li">0m</div></div>
-      <div class="kpi blue"><div class="kpi-label">Naukri time</div><div class="kpi-value" id="k-nk">0m</div></div>
-    </div>
-
-    <div class="stats-row">
-      <div class="stat-card"><div class="stat-val" id="s-li-prof">0</div><div class="stat-label">LI Profiles</div></div>
-      <div class="stat-card"><div class="stat-val" id="s-li-conn">0</div><div class="stat-label">Connections</div></div>
-      <div class="stat-card"><div class="stat-val" id="s-li-msg">0</div><div class="stat-label">Messages</div></div>
-      <div class="stat-card"><div class="stat-val" id="s-nk-prof">0</div><div class="stat-label">NK Profiles</div></div>
-      <div class="stat-card"><div class="stat-val" id="s-nk-cv">0</div><div class="stat-label">CVs</div></div>
-      <div class="stat-card"><div class="stat-val" id="s-nk-contact">0</div><div class="stat-label">Contacts</div></div>
-    </div>
+    <div class="kpi-grid" id="kpi-grid"></div>
+    <div class="stats-row" id="stats-row"></div>
 
     <div class="split">
       <div class="card">
@@ -160,27 +127,7 @@
       </div>
     </div>
 
-    <div class="split">
-      <div class="card">
-        <h2>LinkedIn Connections Sent</h2>
-        <div id="li-connections"><div class="empty">No connections yet</div></div>
-      </div>
-      <div class="card">
-        <h2>Naukri CV Downloads</h2>
-        <div id="nk-downloads"><div class="empty">No downloads yet</div></div>
-      </div>
-    </div>
-
-    <div class="split">
-      <div class="card">
-        <h2>LinkedIn Profiles Viewed</h2>
-        <div id="li-profiles"><div class="empty">No profiles yet</div></div>
-      </div>
-      <div class="card">
-        <h2>Naukri Profiles Viewed</h2>
-        <div id="nk-profiles"><div class="empty">No profiles yet</div></div>
-      </div>
-    </div>
+    <div id="detail-cards"></div>
 
     <div class="card full" style="margin-bottom: 16px;">
       <h2>Event Log</h2>

@@ -4,6 +4,8 @@
     "syncUrl":     { "type": "string", "description": "Server URL for team sync" },
     "syncToken":   { "type": "string", "description": "Team authentication token" },
     "syncEnabled": { "type": "boolean", "description": "Enable automatic sync" },
-    "showOverlay": { "type": "boolean", "description": "Show floating overlay" }
+    "showOverlay": { "type": "boolean", "description": "Show floating overlay" },
+    "memberName":  { "type": "string", "description": "Pre-configured member name" },
+    "memberEmail": { "type": "string", "description": "Pre-configured member email" }
   }
 }

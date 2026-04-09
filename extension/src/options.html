@@ -31,20 +31,27 @@
       .sync-status { font-size: 11px; color: #8b98a5; margin-top: 8px; }
 
       .info { margin-top: 24px; padding: 14px; background: #121a25; border: 1px solid #1b2530; border-radius: 8px; font-size: 12px; color: #8b98a5; line-height: 1.6; }
+
+      .platform-list { margin-top: 12px; }
+      .platform-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #121a25; border: 1px solid #1b2530; border-radius: 6px; margin-bottom: 6px; font-size: 12px; }
+      .platform-dot { width: 8px; height: 8px; border-radius: 50%; }
+      .platform-name { flex: 1; font-weight: 500; }
+      .platform-domains { color: #8b98a5; font-size: 10px; }
+      .dept-name { display: inline-block; padding: 2px 8px; background: rgba(74,222,128,0.1); color: #4ade80; border-radius: 3px; font-size: 11px; font-weight: 600; }
     </style>
   </head>
   <body>
     <h1>Productivity Analyser — Settings</h1>
     <p>Everything is stored locally in your browser. Optionally sync to your team dashboard.</p>
 
-    <h2>Recruiter Identity</h2>
+    <h2>Member Identity</h2>
     <div class="field">
       <label>Full Name</label>
-      <input type="text" id="recruiterName" placeholder="e.g. Raghu Peri" />
+      <input type="text" id="memberName" placeholder="e.g. John Smith" />
     </div>
     <div class="field">
       <label>Email</label>
-      <input type="email" id="recruiterEmail" placeholder="e.g. raghu@company.com" />
+      <input type="email" id="memberEmail" placeholder="e.g. john@company.com" />
     </div>
 
     <h2>Team Sync</h2>
@@ -61,6 +68,17 @@
     <div style="display:flex;gap:8px;margin-top:8px;">
       <button class="secondary" id="test-sync">Test Connection</button>
       <button class="secondary" id="sync-now">Sync Now</button>
+      <button class="secondary" id="refresh-config">Refresh Config</button>
+    </div>
+
+    <h2>Department & Platforms</h2>
+    <div id="dept-info" style="margin-bottom: 12px;">
+      <span style="color:#8b98a5;font-size:12px;">Department: </span>
+      <span class="dept-name" id="dept-display">Not configured</span>
+    </div>
+    <div id="platform-list-container">
+      <div style="color:#8b98a5;font-size:12px;">Platforms are configured by your admin via the team dashboard.</div>
+      <div class="platform-list" id="platform-list"></div>
     </div>
 
     <h2>Display</h2>
@@ -74,8 +92,8 @@
 
     <div class="info">
       <strong>How it works:</strong><br>
-      The extension tracks your browsing time, LinkedIn activity (profile views, connections, messages), and Naukri activity (profile views, CV downloads, contact reveals).<br><br>
-      When sync is enabled, a daily summary is sent to your team dashboard every 5 minutes. No raw browsing data leaves your machine — only aggregated recruiter metrics.<br><br>
+      The extension tracks your browsing time and activity on platforms configured for your department (e.g., LinkedIn, Naukri, Sales Navigator, Monster, Dice, etc.).<br><br>
+      When sync is enabled, a daily summary is sent to your team dashboard every 5 minutes. No raw browsing data leaves your machine — only aggregated productivity metrics.<br><br>
       Click the extension icon for today's summary. Click "Full Dashboard" for detailed history.
     </div>
 

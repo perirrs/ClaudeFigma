@@ -1,4 +1,4 @@
-const SYNC_SETTINGS_KEYS = ["recruiterName", "recruiterEmail", "syncEnabled", "syncUrl", "syncToken", "showOverlay"];
+const SYNC_SETTINGS_KEYS = ["memberName", "memberEmail", "recruiterName", "recruiterEmail", "syncEnabled", "syncUrl", "syncToken", "showOverlay"];
 const DEFAULT_SYNC_URL = "https://mats.base44.app/api/functions/syncActivity";
 
 async function load() {
@@ -6,8 +6,9 @@ async function load() {
   try { managed = await chrome.storage.managed.get(null); } catch {}
 
   const data = await chrome.storage.sync.get(SYNC_SETTINGS_KEYS);
-  document.getElementById("recruiterName").value = data.recruiterName || "";
-  document.getElementById("recruiterEmail").value = data.recruiterEmail || "";
+  // Support both new (memberName) and legacy (recruiterName) fields
+  document.getElementById("memberName").value = data.memberName || data.recruiterName || "";
+  document.getElementById("memberEmail").value = data.memberEmail || data.recruiterEmail || "";
   document.getElementById("syncEnabled").checked = managed.syncEnabled ?? !!data.syncEnabled;
   document.getElementById("syncUrl").value = managed.syncUrl || data.syncUrl || DEFAULT_SYNC_URL;
   document.getElementById("syncToken").value = managed.syncToken || data.syncToken || "";
@@ -23,20 +24,59 @@ async function load() {
     document.getElementById("sync-status").textContent =
       lastSyncError ? `Last sync failed ${ago}m ago: ${lastSyncError}` : `Last sync: ${ago}m ago`;
   }
+
+  // Load platform config and department info
+  loadPlatformInfo();
 }
 load();
 
+async function loadPlatformInfo() {
+  const stored = await chrome.storage.local.get(["pa_platform_config", "pa_department", "pa_member_info"]);
+
+  const deptEl = document.getElementById("dept-display");
+  if (stored.pa_department) {
+    deptEl.textContent = stored.pa_department;
+  } else {
+    deptEl.textContent = "Not configured";
+  }
+
+  const listEl = document.getElementById("platform-list");
+  const platforms = stored.pa_platform_config || [];
+  if (platforms.length === 0) {
+    listEl.innerHTML = '<div style="color:#8b98a5;font-size:11px;padding:8px 0;">No platforms configured. Click "Refresh Config" after entering your email and saving settings.</div>';
+    return;
+  }
+
+  listEl.innerHTML = platforms.map(p => `
+    <div class="platform-item">
+      <div class="platform-dot" style="background:${p.color || '#8b98a5'}"></div>
+      <div class="platform-name">${esc(p.name)}</div>
+      <div class="platform-domains">${(p.domains || []).join(", ")}</div>
+    </div>
+  `).join("");
+}
+
+function esc(s) {
+  if (!s) return "";
+  const el = document.createElement("span");
+  el.textContent = s;
+  return el.innerHTML;
+}
+
 document.getElementById("save").addEventListener("click", async () => {
   const settings = {
-    recruiterName: document.getElementById("recruiterName").value.trim(),
-    recruiterEmail: document.getElementById("recruiterEmail").value.trim(),
+    memberName: document.getElementById("memberName").value.trim(),
+    memberEmail: document.getElementById("memberEmail").value.trim(),
+    // Legacy fields for backward compat
+    recruiterName: document.getElementById("memberName").value.trim(),
+    recruiterEmail: document.getElementById("memberEmail").value.trim(),
     syncEnabled: document.getElementById("syncEnabled").checked,
     syncUrl: document.getElementById("syncUrl").value.trim().replace(/\/+$/, ""),
     syncToken: document.getElementById("syncToken").value.trim(),
     showOverlay: document.getElementById("showOverlay").checked,
   };
 
-  if (settings.syncEnabled && !settings.recruiterName) {
+  if (settings.syncEnabled && !settings.memberName) {
     showStatus("Please enter your name for sync.", true);
     return;
   }
@@ -55,7 +95,7 @@ document.getElementById("clear-data").addEventListener("click", async () => {
   showStatus("All data cleared.");
 });
 
-// Test Connection — just checks the server is reachable, does NOT send data
+// Test Connection
 document.getElementById("test-sync").addEventListener("click", async () => {
   const url = document.getElementById("syncUrl").value.trim().replace(/\/+$/, "");
   const token = document.getElementById("syncToken").value.trim();
@@ -65,13 +105,11 @@ document.getElementById("test-sync").addEventListener("click", async () => {
   try {
     const headers = { "Content-Type": "application/json" };
     if (token) { headers["X-API-Key"] = token; headers["Authorization"] = `Bearer ${token}`; }
-    // Send a HEAD/OPTIONS-like check — minimal payload that won't create real records
     const res = await fetch(url, { method: "OPTIONS", headers });
     if (res.ok || res.status === 204) {
       document.getElementById("sync-status").textContent = "Connection OK!";
       document.getElementById("sync-status").style.color = "#4ade80";
     } else {
-      // OPTIONS might not be supported, try with real sync via background
       document.getElementById("sync-status").textContent = "Use 'Sync Now' to send real data.";
       document.getElementById("sync-status").style.color = "#8b98a5";
     }
@@ -81,7 +119,7 @@ document.getElementById("test-sync").addEventListener("click", async () => {
   }
 });
 
-// Sync Now — triggers the real background sync with actual data
+// Sync Now
 document.getElementById("sync-now").addEventListener("click", async () => {
   document.getElementById("sync-status").textContent = "Syncing...";
   document.getElementById("sync-status").style.color = "#8b98a5";
@@ -96,6 +134,26 @@ document.getElementById("sync-now").addEventListener("click", async () => {
     }
   } catch (e) {
     document.getElementById("sync-status").textContent = `Sync failed: ${e.message}`;
+    document.getElementById("sync-status").style.color = "#f87171";
+  }
+});
+
+// Refresh Config — fetches platform config from server
+document.getElementById("refresh-config").addEventListener("click", async () => {
+  document.getElementById("sync-status").textContent = "Fetching config...";
+  document.getElementById("sync-status").style.color = "#8b98a5";
+  try {
+    const result = await chrome.runtime.sendMessage({ type: "pa-refresh-config" });
+    if (result && result.ok) {
+      document.getElementById("sync-status").textContent = `Config updated! ${(result.platforms || []).length} platform(s).`;
+      document.getElementById("sync-status").style.color = "#4ade80";
+      loadPlatformInfo();
+    } else {
+      document.getElementById("sync-status").textContent = "Config fetch failed. Check email and server URL.";
+      document.getElementById("sync-status").style.color = "#f87171";
+    }
+  } catch (e) {
+    document.getElementById("sync-status").textContent = `Config fetch failed: ${e.message}`;
     document.getElementById("sync-status").style.color = "#f87171";
   }
 });
