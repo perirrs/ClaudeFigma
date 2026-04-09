@@ -337,7 +337,75 @@ async function syncToServer() {
     const day = (today && today.date === date) ? today : all[`day_${date}`];
     if (!day) continue;
 
-    // Send one flat record per day (Base44 expects recruiterEmail + date at top level).
+    // Build event detail arrays from the day's events for drill-down.
+    const events = day.events || [];
+
+    // LinkedIn profiles viewed — deduplicated with name, title, URL, view count, timestamps
+    const liProfileMap = new Map();
+    for (const e of events) {
+      if (e.source !== "linkedin" || e.type !== "profile_viewed" || !e.profile_url) continue;
+      const prev = liProfileMap.get(e.profile_url);
+      if (!prev) {
+        liProfileMap.set(e.profile_url, { url: e.profile_url, name: e.profile_name || "", title: e.profile_title || "", views: 1, firstSeen: e.ts || e._ts, lastSeen: e.ts || e._ts });
+      } else {
+        prev.views++;
+        if (e.profile_name) prev.name = e.profile_name;
+        if (e.profile_title) prev.title = e.profile_title;
+        prev.lastSeen = e.ts || e._ts;
+      }
+    }
+    const liProfiles = [...liProfileMap.values()];
+
+    // LinkedIn connections sent — with name, title, URL, timestamp
+    const liConnectionsList = events
+      .filter(e => e.source === "linkedin" && e.type === "connection_sent")
+      .map(e => ({ name: e.profile_name || "", title: e.profile_title || "", url: e.profile_url || "", ts: e.ts || e._ts }));
+
+    // LinkedIn messages sent
+    const liMessagesList = events
+      .filter(e => e.source === "linkedin" && e.type === "message_sent")
+      .map(e => ({ name: e.profile_name || "", url: e.profile_url || "", ts: e.ts || e._ts }));
+
+    // Naukri profiles viewed
+    const nkProfileMap = new Map();
+    for (const e of events) {
+      if (e.source !== "naukri" || e.type !== "profile_viewed" || !e.profile_url) continue;
+      const prev = nkProfileMap.get(e.profile_url);
+      if (!prev) {
+        nkProfileMap.set(e.profile_url, { url: e.profile_url, name: e.profile_name || "", title: e.profile_title || "", views: 1, firstSeen: e.ts || e._ts, lastSeen: e.ts || e._ts });
+      } else {
+        prev.views++;
+        if (e.profile_name) prev.name = e.profile_name;
+        if (e.profile_title) prev.title = e.profile_title;
+        prev.lastSeen = e.ts || e._ts;
+      }
+    }
+    const nkProfiles = [...nkProfileMap.values()];
+
+    // Naukri CV downloads
+    const nkDownloadsList = events
+      .filter(e => e.source === "naukri" && e.type === "cv_downloaded")
+      .map(e => ({ name: e.profile_name || "", title: e.profile_title || "", url: e.profile_url || "", ts: e.ts || e._ts }));
+
+    // Naukri contacts revealed
+    const nkContactsList = events
+      .filter(e => e.source === "naukri" && e.type === "contact_viewed")
+      .map(e => ({ name: e.profile_name || "", url: e.profile_url || "", ts: e.ts || e._ts }));
+
+    // All domains with time (not just top 10)
+    const allDomains = Object.entries(day.domains || {}).sort((a, b) => b[1] - a[1]).map(([d, ms]) => ({ domain: d, ms }));
+
+    // Full event timeline (last 500 events for this day)
+    const eventTimeline = events.slice(-500).map(e => ({
+      ts: e.ts || e._ts,
+      source: e.source || "",
+      type: e.type || "",
+      profileName: e.profile_name || "",
+      profileTitle: e.profile_title || "",
+      profileUrl: e.profile_url || "",
+    }));
+
+    // Send one flat record per day with full drill-down data.
     const payload = {
       recruiterName: cfg.recruiterName,
       recruiterEmail: cfg.recruiterEmail || "",
@@ -354,7 +422,15 @@ async function syncToServer() {
       naukriDownloads: day.naukriDownloads || 0,
       naukriContacts: day.naukriContacts || 0,
       naukriSearches: day.naukriSearches || 0,
-      topDomains: Object.entries(day.domains || {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([d, ms]) => ({ domain: d, ms })),
+      // Drill-down detail data
+      allDomains,
+      liProfiles,
+      liConnectionsList,
+      liMessagesList,
+      nkProfiles,
+      nkDownloadsList,
+      nkContactsList,
+      eventTimeline,
       extensionVersion: chrome.runtime.getManifest().version,
       syncedAt: new Date().toISOString(),
     };
