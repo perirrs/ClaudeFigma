@@ -95,27 +95,72 @@ document.getElementById("clear-data").addEventListener("click", async () => {
   showStatus("All data cleared.");
 });
 
-// Test Connection
+// Test Connection — makes a real authenticated POST to /getConfig so an
+// invalid or empty token actually fails instead of passing via CORS preflight.
 document.getElementById("test-sync").addEventListener("click", async () => {
   const url = document.getElementById("syncUrl").value.trim().replace(/\/+$/, "");
   const token = document.getElementById("syncToken").value.trim();
-  if (!url) { showStatus("Enter a server URL first.", true); return; }
+  const email = document.getElementById("memberEmail").value.trim();
+  const statusEl = document.getElementById("sync-status");
 
-  document.getElementById("sync-status").textContent = "Testing...";
+  if (!url) { showStatus("Enter a server URL first.", true); return; }
+  if (!token) {
+    statusEl.textContent = "Enter a team token first.";
+    statusEl.style.color = "#f87171";
+    return;
+  }
+  if (!email) {
+    statusEl.textContent = "Enter your email first (required to fetch config).";
+    statusEl.style.color = "#f87171";
+    return;
+  }
+
+  // Derive /getConfig URL from the configured /syncActivity URL.
+  const configUrl = url.replace(/\/syncActivity\b/, "/getConfig");
+  if (configUrl === url) {
+    statusEl.textContent = "Server URL must end with /syncActivity";
+    statusEl.style.color = "#f87171";
+    return;
+  }
+
+  statusEl.textContent = "Testing...";
+  statusEl.style.color = "#8b98a5";
   try {
-    const headers = { "Content-Type": "application/json" };
-    if (token) { headers["X-API-Key"] = token; headers["Authorization"] = `Bearer ${token}`; }
-    const res = await fetch(url, { method: "OPTIONS", headers });
-    if (res.ok || res.status === 204) {
-      document.getElementById("sync-status").textContent = "Connection OK!";
-      document.getElementById("sync-status").style.color = "#4ade80";
+    // Only send X-API-Key — NOT Authorization (Base44 treats that as a JWT).
+    const headers = { "Content-Type": "application/json", "X-API-Key": token };
+    const res = await fetch(configUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ email }),
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      statusEl.textContent = "Invalid token — server rejected the API key.";
+      statusEl.style.color = "#f87171";
+      return;
+    }
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      statusEl.textContent = `Connection failed: HTTP ${res.status} ${txt.slice(0, 120)}`;
+      statusEl.style.color = "#f87171";
+      return;
+    }
+
+    const data = await res.json().catch(() => null);
+    if (data && Array.isArray(data.platforms)) {
+      const deptName = data.department ? (typeof data.department === "string" ? data.department : data.department.name) : "unknown";
+      statusEl.textContent = `Connection OK! Department: ${deptName}, ${data.platforms.length} platform(s).`;
+      statusEl.style.color = "#4ade80";
+    } else if (data && data.error) {
+      statusEl.textContent = `Rejected: ${data.error}`;
+      statusEl.style.color = "#f87171";
     } else {
-      document.getElementById("sync-status").textContent = "Use 'Sync Now' to send real data.";
-      document.getElementById("sync-status").style.color = "#8b98a5";
+      statusEl.textContent = "Connected but response was unexpected.";
+      statusEl.style.color = "#f87171";
     }
   } catch (e) {
-    document.getElementById("sync-status").textContent = `Connection failed: ${e.message}`;
-    document.getElementById("sync-status").style.color = "#f87171";
+    statusEl.textContent = `Connection failed: ${e.message}`;
+    statusEl.style.color = "#f87171";
   }
 });
 

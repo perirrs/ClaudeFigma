@@ -87,11 +87,10 @@ async function fetchServerConfig() {
   const configUrl = cfg.syncUrl.replace(/\/syncActivity\b/, "/getConfig");
   if (configUrl === cfg.syncUrl) return;
 
+  // IMPORTANT: only send X-API-Key. Base44's createClientFromRequest parses the
+  // Authorization header as a JWT and returns 401 before our function runs.
   const headers = { "Content-Type": "application/json" };
-  if (cfg.syncToken) {
-    headers["X-API-Key"] = cfg.syncToken;
-    headers["Authorization"] = `Bearer ${cfg.syncToken}`;
-  }
+  if (cfg.syncToken) headers["X-API-Key"] = cfg.syncToken;
 
   try {
     const res = await fetch(configUrl, {
@@ -478,11 +477,10 @@ async function syncToServer() {
   }
 
   const all = await chrome.storage.local.get(null);
+  // IMPORTANT: only send X-API-Key. Base44's createClientFromRequest parses the
+  // Authorization header as a JWT and returns 401 before our function runs.
   const headers = { "Content-Type": "application/json" };
-  if (cfg.syncToken) {
-    headers["X-API-Key"] = cfg.syncToken;
-    headers["Authorization"] = `Bearer ${cfg.syncToken}`;
-  }
+  if (cfg.syncToken) headers["X-API-Key"] = cfg.syncToken;
 
   let lastError = null;
   let synced = 0;
