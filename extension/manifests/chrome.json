@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Productivity Analyser",
   "version": "0.5.0",
-  "description": "Config-driven productivity tracker for teams. Tracks browsing time and platform activity. Everything stored locally — optional team sync.",
+  "description": "Track your own productivity across recruiting platforms. All data stays local; optional sync to your team dashboard.",
   "permissions": ["tabs", "activeTab", "storage", "idle", "alarms"],
   "host_permissions": [
     "https://www.linkedin.com/*",
