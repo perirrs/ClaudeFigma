@@ -561,8 +561,11 @@ async function syncToServer() {
       profileUrl: e.profile_url || "",
     }));
 
-    // Payload matching Base44 syncActivity endpoint exactly
+    // Payload matching Base44 syncActivity endpoint exactly.
+    // Server code says "API key: body takes priority, then X-API-Key header" —
+    // include it in the body as a belt-and-suspenders fallback.
     const payload = {
+      apiKey: cfg.syncToken || "",
       memberName: cfg.memberName,
       memberEmail: cfg.memberEmail || "",
       date: day.date,
