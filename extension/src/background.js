@@ -121,8 +121,21 @@ async function fetchServerConfig() {
 let today = null;
 
 function now() { return Date.now(); }
+
+// Internal browser URLs (chrome://, chrome-extension://, about:, edge://,
+// moz-extension://, etc.) should never be counted as real browsing time —
+// otherwise the extension's own settings page and other installed extensions
+// show up as "domains" in the activity report.
+function isTrackableUrl(url) {
+  if (!url) return false;
+  try {
+    const proto = new URL(url).protocol;
+    return proto === "http:" || proto === "https:";
+  } catch { return false; }
+}
+
 function domainOf(url) {
-  if (!url) return null;
+  if (!isTrackableUrl(url)) return null;
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return null; }
 }
 function todayKey() {
@@ -181,6 +194,10 @@ async function saveToday() {
 
 function bufferDwell() {
   if (!activeUrl || userIdle || activeStart == null) return;
+  // Skip internal pages entirely (chrome://, chrome-extension://, about:,
+  // edge://, moz-extension:// ...) — don't count their time or log them
+  // as fake "domains".
+  if (!isTrackableUrl(activeUrl)) { activeStart = now(); return; }
   const ms = now() - activeStart;
   if (ms < 1000) return;
   activeStart = now();

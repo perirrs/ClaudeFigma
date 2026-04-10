@@ -41,6 +41,17 @@
     return true;
   }
 
+  // Returns a trimmed person-name only if it's plausible; null otherwise.
+  // Centralizes the "never store generic UI headings as a name" rule so we
+  // can't accidentally record "Feed" or "Search" as a person's name.
+  function realName(s) {
+    if (!s) return null;
+    const t = s.trim();
+    if (!t || t.length > 120) return null;
+    if (GENERIC_HEADING_RE.test(t)) return null;
+    return t;
+  }
+
   // ---- Profile dwell tracking ----
   let currentProfile = null;
   let profileStart = null;
@@ -116,11 +127,20 @@
     }
     if (!title) {
       const titleSelectors = [
+        // Most common 2024/2025 LinkedIn profile headline location.
+        "main .pv-text-details__left-panel div.text-body-medium.break-words",
+        "main div.text-body-medium.break-words",
         "div.text-body-medium.break-words",
+        // Older class variants.
         ".pv-text-details__left-panel .text-body-medium",
+        ".ph5 .text-body-medium",
+        ".pv-top-card__summary-info .text-body-medium",
         ".profile-topcard-person-entity__summary",
         "[data-anonymize='headline']",
-        ".text-body-medium:not(h1):not(a)",
+        "[data-field='headline']",
+        ".pv-top-card--list .text-body-medium",
+        // Very broad fallback.
+        "main section .text-body-medium",
       ];
       for (const sel of titleSelectors) {
         const el = document.querySelector(sel);
@@ -130,6 +150,9 @@
     }
 
     // Strategy 2: document.title / og:title ("Name - Title at Company | LinkedIn").
+    // CAREFUL: during SPA navigation, document.title lags behind the URL —
+    // it can still read "Feed | LinkedIn" or "Search | LinkedIn" for a
+    // second or two after navigating into an /in/ profile. Must filter.
     if (!name || !title) {
       const og = document.querySelector('meta[property="og:title"]');
       const rawTitle = (og && og.getAttribute("content")) || document.title || "";
@@ -140,9 +163,10 @@
       if (cleaned && !/^linkedin/i.test(cleaned)) {
         const m = cleaned.match(/^(.+?)\s+[-–|]\s+(.+)$/);
         if (m) {
-          if (!name) name = m[1].trim();
+          const candidate = m[1].trim();
+          if (!name && !GENERIC_HEADING_RE.test(candidate)) name = candidate;
           if (!title && looksLikeRealTitle(m[2])) title = m[2].trim();
-        } else if (!name) {
+        } else if (!name && !GENERIC_HEADING_RE.test(cleaned)) {
           name = cleaned;
         }
       }
@@ -162,13 +186,20 @@
       }
     }
 
-    return { name, title };
+    // Final safety: never leak a generic UI heading as a person name.
+    return { name: realName(name), title };
   }
 
   function updateCurrentProfileMeta() {
     if (!currentProfile) return;
     const { name, title } = extractProfile();
-    if (name && !currentProfile.name) currentProfile.name = name;
+    // Allow upgrading: overwrite if we previously stored nothing OR a
+    // generic UI heading ("Feed"/"Search") that slipped through on an
+    // early tick before LinkedIn's SPA rendered the profile.
+    const current = currentProfile.name;
+    if (name && (!current || GENERIC_HEADING_RE.test((current || "").trim()))) {
+      currentProfile.name = name;
+    }
     if (title && !currentProfile.title) currentProfile.title = title;
     try { window.__paLast = { ...currentProfile, ts: Date.now() }; } catch {}
   }
@@ -183,7 +214,7 @@
     if (dwell >= 1500 && currentProfile.url) {
       send("profile_viewed", {
         profile_url: currentProfile.url,
-        profile_name: currentProfile.name || null,
+        profile_name: realName(currentProfile.name),
         profile_title: currentProfile.title || null,
         meta: { dwell_ms: dwell, final: true },
       });
@@ -203,12 +234,16 @@
     const dwell = Date.now() - profileStart;
     if (dwell < 2000) return;
     updateCurrentProfileMeta();
-    // Must be on an actual /in/ profile page (url is set by profileUrlFromLocation).
+    // Must be on an actual /in/ profile page.
     if (!currentProfile.url) return;
+    // Don't fire early while we still have no real name — wait for the SPA
+    // to render. Hard cap at 8s so we still report even if extraction fails.
+    const havingRealName = realName(currentProfile.name) != null;
+    if (!havingRealName && dwell < 8000) return;
     profileSent = true;
     send("profile_viewed", {
       profile_url: currentProfile.url,
-      profile_name: currentProfile.name || null,
+      profile_name: realName(currentProfile.name),
       profile_title: currentProfile.title || null,
       meta: { dwell_ms: dwell, early: true },
     });
@@ -411,7 +446,7 @@
       if (/invitation sent|invite sent|connection request sent/.test(txt)) {
         send("connection_sent", {
           profile_url: armedProfileUrl || profileUrlFromLocation(),
-          profile_name: armedProfileName || (currentProfile && currentProfile.name),
+          profile_name: realName(armedProfileName) || realName(currentProfile && currentProfile.name),
           profile_title: armedProfileTitle || (currentProfile && currentProfile.title),
         });
         disarm();
@@ -467,7 +502,7 @@
     if (isMessagingSendButton(e.target)) {
       send("message_sent", {
         profile_url: profileUrlFromLocation(),
-        profile_name: currentProfile && currentProfile.name,
+        profile_name: realName(currentProfile && currentProfile.name),
         profile_title: currentProfile && currentProfile.title,
       });
       return;
@@ -493,7 +528,7 @@
     if (isInMessagingContext(target)) {
       send("message_sent", {
         profile_url: profileUrlFromLocation(),
-        profile_name: currentProfile && currentProfile.name,
+        profile_name: realName(currentProfile && currentProfile.name),
         profile_title: currentProfile && currentProfile.title,
       });
       return;
@@ -503,7 +538,7 @@
     if (isArmed()) {
       send("connection_sent", {
         profile_url: armedProfileUrl || profileUrlFromLocation(),
-        profile_name: armedProfileName || (currentProfile && currentProfile.name),
+        profile_name: realName(armedProfileName) || realName(currentProfile && currentProfile.name),
         profile_title: armedProfileTitle || (currentProfile && currentProfile.title),
       });
       disarm();
@@ -517,13 +552,13 @@
       if (/message|new message|write a message/.test(blob)) {
         send("message_sent", {
           profile_url: profileUrlFromLocation(),
-          profile_name: currentProfile && currentProfile.name,
+          profile_name: realName(currentProfile && currentProfile.name),
           profile_title: currentProfile && currentProfile.title,
         });
       } else if (/connect|invitation/.test(blob)) {
         send("connection_sent", {
           profile_url: (currentProfile && currentProfile.url) || profileUrlFromLocation(),
-          profile_name: currentProfile && currentProfile.name,
+          profile_name: realName(currentProfile && currentProfile.name),
           profile_title: currentProfile && currentProfile.title,
         });
       }
@@ -552,7 +587,7 @@
     if (isInMessagingContext(e.target)) {
       send("message_sent", {
         profile_url: profileUrlFromLocation(),
-        profile_name: currentProfile && currentProfile.name,
+        profile_name: realName(currentProfile && currentProfile.name),
         profile_title: currentProfile && currentProfile.title,
       });
     }
