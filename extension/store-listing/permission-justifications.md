@@ -121,17 +121,14 @@ activity alongside their LinkedIn activity in the same dashboard.
 **Why we need it**: This is the most sensitive permission on the list
 and requires the most careful explanation.
 
-1. **Platform config is dynamic, not hard-coded.** The list of sites the
+1. **Site list is dynamic, not hard-coded.** The list of sites the
    extension tracks is fetched at runtime from the user's team server,
-   not baked into the manifest. Our current default team config already
-   includes 18 platforms (LinkedIn, Naukri, FoundIt, Monster, Dice,
-   LinkedIn Sales Navigator, Seamless.AI, Apollo, Shine, CareerBuilder,
-   Indeed, ZipRecruiter, Hirist, Instahyre, Glassdoor, Wellfound, Lusha,
-   RocketReach) and new platforms can be added by the team admin at any
-   time without shipping an extension update. Hard-coding every
-   permitted host in the manifest would mean every new platform addition
-   requires a fresh Chrome Web Store submission and review cycle, which
-   is not workable for a config-driven tool.
+   not baked into the manifest. A team administrator can add a new
+   site server-side and every team member's extension picks up the
+   change at the next refresh. Hard-coding every permitted host in the
+   manifest would mean every new site addition requires a fresh Chrome
+   Web Store submission and review cycle, which is not workable for a
+   configuration-driven tool.
 
 2. **The floating stats overlay needs to run on any page.** The overlay
    content script (`content-overlay.js`) shows the user's own daily
